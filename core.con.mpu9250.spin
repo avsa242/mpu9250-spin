@@ -38,6 +38,22 @@ CON
         MASK_OPEN               = INT_BYPASS_CFG_MASK ^ (1 << FLD_OPEN)
         MASK_ACTL               = INT_BYPASS_CFG_MASK ^ (1 << FLD_ACTL)
 
+    ACCEL_XOUT_H                = $3B
+    ACCEL_XOUT_L                = $3C
+    ACCEL_YOUT_H                = $3D
+    ACCEL_YOUT_L                = $3E
+    ACCEL_ZOUT_H                = $3F
+    ACCEL_ZOUT_L                = $40
+
+    TEMP_OUT_H                  = $41
+    TEMP_OUT_L                  = $42
+
+    GYRO_XOUT_H                 = $43
+    GYRO_XOUT_L                 = $44
+    GYRO_YOUT_H                 = $45
+    GYRO_YOUT_L                 = $46
+    GYRO_ZOUT_H                 = $47
+    GYRO_ZOUT_L                 = $48
 
     USER_CTRL                   = $6A
     USER_CTRL_MASK              = $77

@@ -25,6 +25,10 @@ CON
     DEF_HZ              = 400_000
     I2C_MAX_FREQ        = core#I2C_MAX_FREQ
 
+    X_AXIS              = 0
+    Y_AXIS              = 1
+    Z_AXIS              = 2
+
 VAR
 
 
@@ -47,8 +51,8 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
         if I2C_HZ =< core#I2C_MAX_FREQ
             if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
                 time.USleep (core#TREGRW)
-                if i2c.present (SLAVE_XLG)                       'Response from device?
-                    if WhoAmI_XLG == core#WHO_AM_I_RESP             'Is it really an MPU9250?
+                if i2c.present (SLAVE_XLG)                      'Response from device?
+                    if DeviceID(SLAVE_XLG) == core#WHO_AM_I_RESP'Is it really an MPU9250?
                         disableI2CMaster                        ' Bypass the internal I2C master so we can read the Mag from the same bus
                         return okay
 
@@ -58,17 +62,32 @@ PUB Stop
 ' Put any other housekeeping code here required/recommended by your device before shutting down
     i2c.terminate
 
-PUB Mag1
+PUB Accel(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+' Read accelerometer data
+    tmp := $00
+    readReg(SLAVE_XLG, core#ACCEL_XOUT_H, 6, @tmp)              'XXX Benchmark this and compare to different read methods
+                                                                '|
+    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])                  '|
+    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])                  '|
+    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])                  '|
 
-    return i2c.Present (SLAVE_MAG_WR)
+    long[ptr_x] := ~~tmpx
+    long[ptr_y] := ~~tmpy
+    long[ptr_z] := ~~tmpz
 
-PUB WhoAmI_Mag
-
-    readReg (SLAVE_MAG, core#WIA, 1, @result)
-
-PUB WhoAmI_XLG
-
-    readReg(SLAVE_XLG, core#WHO_AM_I, 1, @result)
+PUB DeviceID(sub_device)
+' Read device ID from sub_device
+'   Valid values:
+'       SLAVE_XLG($68): Return device ID from accelerometer/gyro
+'       SLAVE_MAG($0C): Return device ID from magnetometer
+'   Any other value is ignored
+    case sub_device
+        SLAVE_MAG:
+            readReg (SLAVE_MAG, core#WIA, 1, @result)
+        SLAVE_XLG:
+            readReg (SLAVE_XLG, core#WHO_AM_I, 1, @result)
+        OTHER:
+            return FALSE
 
 PRI disableI2CMaster | tmp
 

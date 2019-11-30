@@ -15,9 +15,14 @@ CON
     _clkmode    = cfg#_clkmode
     _xinfreq    = cfg#_xinfreq
 
+    COL_REG     = 0
+    COL_SET     = 12
+    COL_READ    = 24
+    COL_PF      = 40
+
     LED         = cfg#LED1
-    SCL_PIN     = 22
-    SDA_PIN     = 23
+    SCL_PIN     = 28
+    SDA_PIN     = 29
     I2C_HZ      = 400_000
 
 OBJ
@@ -25,22 +30,74 @@ OBJ
     cfg     : "core.con.boardcfg.flip"
     ser     : "com.serial.terminal"
     time    : "time"
+    io      : "io"
     mpu9250 : "sensor.imu.9dof.mpu9250.i2c"
 
 VAR
 
-    byte _ser_cog
+    long _fails, _expanded
+    byte _ser_cog, _row
 
-PUB Main
+PUB Main | ax, ay, az
 
     Setup
-    ser.Str (string("XLG: "))
-    ser.Hex (mpu9250.WhoAmI_XLG, 8)
-    ser.NewLine
+    _row := 3
+    ser.Position (0, _row)
+'    _expanded := TRUE
 
-    ser.Str (string("MAG: "))
-    ser.Hex (mpu9250.WhoAmI_Mag, 8)
-    Flash (LED, 100)
+    FlashLED (LED, 100)
+
+
+PUB TrueFalse(num)
+
+    case num
+        0: ser.Str (string("FALSE"))
+        -1: ser.Str (string("TRUE"))
+        OTHER: ser.Str (string("???"))
+
+PUB Message(field, arg1, arg2)
+
+   case _expanded
+        TRUE:
+            ser.PositionX (COL_REG)
+            ser.Str (field)
+
+            ser.PositionX (COL_SET)
+            ser.Str (string("SET: "))
+            ser.Dec (arg1)
+
+            ser.PositionX (COL_READ)
+            ser.Str (string("READ: "))
+            ser.Dec (arg2)
+            ser.Chars (32, 3)
+            ser.PositionX (COL_PF)
+            PassFail (arg1 == arg2)
+            ser.NewLine
+
+        FALSE:
+            ser.Position (COL_REG, _row)
+            ser.Str (field)
+
+            ser.Position (COL_SET, _row)
+            ser.Str (string("SET: "))
+            ser.Dec (arg1)
+
+            ser.Position (COL_READ, _row)
+            ser.Str (string("READ: "))
+            ser.Dec (arg2)
+
+            ser.Position (COL_PF, _row)
+            PassFail (arg1 == arg2)
+            ser.NewLine
+        OTHER:
+            ser.Str (string("DEADBEEF"))
+
+PUB PassFail(num)
+
+    case num
+        0: ser.Str (string("FAIL"))
+        -1: ser.Str (string("PASS"))
+        OTHER: ser.Str (string("???"))
 
 PUB Setup
 
@@ -54,13 +111,13 @@ PUB Setup
         mpu9250.Stop
         time.MSleep (500)
         ser.Stop
-        Flash (LED, 500)
+        FlashLED (LED, 500)
 
-PUB Flash(led_pin, delay_ms)
+PUB FlashLED(led_pin, delay_ms)
 
-    dira[led_pin] := 1
+    io.Output (led_pin)
     repeat
-        !outa[led_pin]
+        io.Toggle (led_pin)
         time.MSleep (delay_ms)
 
 DAT
