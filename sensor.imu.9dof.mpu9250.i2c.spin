@@ -29,6 +29,15 @@ CON
     Y_AXIS              = 1
     Z_AXIS              = 2
 
+' Magnetometer operating modes
+    POWERDOWN           = %0000
+    SINGLE              = %0001
+    CONT1               = %0010
+    CONT2               = %0110
+    EXT_TRIG            = %0100
+    SELFTEST            = %1000
+    FUSEACCESS          = %1111
+
 VAR
 
 
@@ -65,18 +74,24 @@ PUB Stop
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read accelerometer data
     tmp := $00
-    readReg(SLAVE_XLG, core#ACCEL_XOUT_H, 6, @tmp)              'XXX Benchmark this and compare to different read methods
-                                                                '|
-    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])                  '|
-    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])                  '|
-    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])                  '|
+    readReg(SLAVE_XLG, core#ACCEL_XOUT_H, 6, @tmp)
+
+    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])
+    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])
+    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])
 
     long[ptr_x] := ~~tmpx
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
-PUB DataReady
-' Indicates new data is ready to be read
+PUB DataReadyMag
+' Indicates new magnetometer data is ready to be read
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    readReg(SLAVE_MAG, core#ST1, 1, @result)
+    result := (result & %1) * TRUE
+
+PUB DataReadyXLG
+' Indicates new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
     result := (result & %1) * TRUE
@@ -98,15 +113,80 @@ PUB DeviceID(sub_device)
 PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read gyro data
     tmp := $00
-    readReg(SLAVE_XLG, core#GYRO_XOUT_H, 6, @tmp)              'XXX Benchmark this and compare to different read methods
-                                                                '|
-    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])                  '|
-    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])                  '|
-    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])                  '|
+    readReg(SLAVE_XLG, core#GYRO_XOUT_H, 6, @tmp)
+
+    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])
+    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])
+    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])
 
     long[ptr_x] := ~~tmpx
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
+
+PUB MagADCRes(bits) | tmp
+' Set magnetometer ADC resolution, in bits
+'   Valid values: 14, 16
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+    case bits
+        14, 16:
+            bits := lookdownz(bits: 14, 16) << core#FLD_BIT
+        OTHER:
+            tmp := (tmp >> core#FLD_BIT) & %1
+            result := lookupz(tmp: 14, 16)
+            return
+
+    tmp &= core#MASK_BIT
+    tmp := (tmp | bits) & core#CNTL1_MASK
+    writeReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+
+PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+' Read Magnetometer data
+    tmp := $00
+    readReg(SLAVE_MAG, core#HXL, 7, @tmp)
+
+    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])
+    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])
+    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])
+
+    long[ptr_x] := ~~tmpx
+    long[ptr_y] := ~~tmpy
+    long[ptr_z] := ~~tmpz
+
+PUB MagDataOverflowed
+' Indicates magnetometer data overflowed
+'   Returns: TRUE (-1) if overflow occurred, FALSE (0) otherwise
+    result := $00
+    readReg(SLAVE_MAG, core#ST1, 1, @result)
+    result := ((result >> 1) & %1) * TRUE
+
+PUB MeasureMag
+' Perform magnetometer measurement
+    OpModeMag(SINGLE)
+
+PUB OpModeMag(mode) | tmp
+' Set magnetometer operating mode
+'   Valid values:
+'       POWERDOWN (0): Power down
+'       SINGLE (1): Single measurement mode
+'       CONT1 (2): Continuous measurement mode 1
+'       CONT2 (6): Continuous measurement mode 2
+'       EXT_TRIG (4): External trigger measurement mode
+'       SELFTEST (8): Self-test mode
+'       FUSEACCESS (15): Fuse ROM access mode
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+    case mode
+        POWERDOWN, SINGLE, CONT1, CONT2, EXT_TRIG, SELFTEST, FUSEACCESS:
+        OTHER:
+            result := tmp & core#BITS_MODE
+            return
+
+    tmp &= core#MASK_MODE
+    tmp := (tmp | mode) & core#CNTL1_MASK
+    writeReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
 
 PRI disableI2CMaster | tmp
 

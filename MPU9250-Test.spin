@@ -43,10 +43,33 @@ PUB Main | ax, ay, az
     Setup
     _row := 3
     ser.Position (0, _row)
-'    _expanded := TRUE
+    _expanded := TRUE
+
+    MAGMODE(1)
+    MAGBIT(1)
 
     FlashLED (LED, 100)
 
+PUB MAGBIT(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 1 to 2
+            mpu9250.MagADCRes (lookup(tmp: 14, 16))
+            read := mpu9250.MagADCRes (-2)
+            Message (string("MAGBIT"), lookup(tmp: 14, 16), read)
+
+
+PUB MAGMODE(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 1 to 7
+            mpu9250.OpModeMag (lookup(tmp: mpu9250#POWERDOWN, mpu9250#SINGLE, mpu9250#CONT1, mpu9250#CONT2, mpu9250#EXT_TRIG, mpu9250#SELFTEST, mpu9250#FUSEACCESS))
+            read := mpu9250.OpModeMag (-2)
+            Message (string("MAGMODE"), lookup(tmp: mpu9250#POWERDOWN, mpu9250#SINGLE, mpu9250#CONT1, mpu9250#CONT2, mpu9250#EXT_TRIG, mpu9250#SELFTEST, mpu9250#FUSEACCESS), read)
+
+    mpu9250.OpModeMag (mpu9250#SINGLE)
 
 PUB TrueFalse(num)
 

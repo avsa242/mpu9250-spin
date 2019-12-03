@@ -85,6 +85,48 @@ CON
 
     INFO                        = $01
     ST1                         = $02
+    ST1_MASK                    = $03
+        FLD_DOR                 = 1
+        FLD_DRDY                = 0
+
+    HXL                         = $03
+    HXH                         = $04
+    HYL                         = $05
+    HYH                         = $06
+    HZL                         = $07
+    HZH                         = $08
+
+    ST2                         = $09
+    ST2_MASK                    = $18
+        FLD_BITM                = 4
+        FLD_HOFL                = 3
+
+    CNTL1                       = $0A
+    CNTL1_MASK                  = $1F
+        FLD_BIT                 = 4
+        FLD_MODE                = 0
+        BITS_MODE               = %1111
+        MASK_BIT                = CNTL1_MASK ^ (1 << FLD_BIT)
+        MASK_MODE               = CNTL1_MASK ^ (BITS_MODE << FLD_MODE)
+
+    CNTL2                       = $0B
+    CNTL2_MASK                  = $01
+        FLD_SRST                = 0
+
+' RESERVED - $0B
+
+    ASTC                        = $0C
+    ASTC_MASK                   = $40
+        FLD_SELF                = 6
+
+' TEST 1 - $0D
+' TEST 2 - $0E
+
+    I2CDIS                      = $0F
+
+    ASAX                        = $10
+    ASAY                        = $11
+    ASAZ                        = $12
 
 PUB Null
 '' This is not a top-level object
