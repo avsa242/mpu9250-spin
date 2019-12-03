@@ -62,7 +62,7 @@ PUB Stop
 ' Put any other housekeeping code here required/recommended by your device before shutting down
     i2c.terminate
 
-PUB Accel(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read accelerometer data
     tmp := $00
     readReg(SLAVE_XLG, core#ACCEL_XOUT_H, 6, @tmp)              'XXX Benchmark this and compare to different read methods
@@ -74,6 +74,12 @@ PUB Accel(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_x] := ~~tmpx
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
+
+PUB DataReady
+' Indicates new data is ready to be read
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
+    result := (result & %1) * TRUE
 
 PUB DeviceID(sub_device)
 ' Read device ID from sub_device
@@ -88,6 +94,19 @@ PUB DeviceID(sub_device)
             readReg (SLAVE_XLG, core#WHO_AM_I, 1, @result)
         OTHER:
             return FALSE
+
+PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+' Read gyro data
+    tmp := $00
+    readReg(SLAVE_XLG, core#GYRO_XOUT_H, 6, @tmp)              'XXX Benchmark this and compare to different read methods
+                                                                '|
+    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])                  '|
+    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])                  '|
+    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])                  '|
+
+    long[ptr_x] := ~~tmpx
+    long[ptr_y] := ~~tmpy
+    long[ptr_z] := ~~tmpz
 
 PRI disableI2CMaster | tmp
 

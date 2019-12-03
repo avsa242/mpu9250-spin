@@ -15,7 +15,6 @@ CON
     I2C_MAX_FREQ                = 400_000
     SLAVE_ADDR                  = $68 << 1
     SLAVE_ADDR_MAG              = $0C << 1
-                                            ' (7-bit format)
 
 ' Startup time
     TREGRW                      = 100               ' ms
@@ -37,6 +36,13 @@ CON
         MASK_LATCH_INT_EN       = INT_BYPASS_CFG_MASK ^ (1 << FLD_LATCH_INT_EN)
         MASK_OPEN               = INT_BYPASS_CFG_MASK ^ (1 << FLD_OPEN)
         MASK_ACTL               = INT_BYPASS_CFG_MASK ^ (1 << FLD_ACTL)
+
+    INT_STATUS                  = $3A
+    INT_STATUS_MASK             = $59
+        FLD_WOM_INT             = 6
+        FLD_FIFO_OVERFLOW_INT   = 4
+        FLD_FSYNC_INT           = 3
+        FLD_RAW_DATA_RDY_INT    = 0
 
     ACCEL_XOUT_H                = $3B
     ACCEL_XOUT_L                = $3C
