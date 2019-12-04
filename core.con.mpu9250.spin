@@ -4,7 +4,7 @@
     Author: Jesse Burt
     Description: Low-level constants
     Copyright (c) 2019
-    Started Sep 02, 2019
+    Started Sep 2, 2019
     Updated Dec 4, 2019
     See end of file for terms of use.
     --------------------------------------------

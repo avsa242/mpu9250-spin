@@ -4,7 +4,7 @@
     Author: Jesse Burt
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2019
-    Started Sep 02, 2019
+    Started Sep 2, 2019
     Updated Dec 4, 2019
     See end of file for terms of use.
     --------------------------------------------
@@ -154,12 +154,12 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
-PUB MagDataOverflowed
-' Indicates magnetometer data overflowed
-'   Returns: TRUE (-1) if overflow occurred, FALSE (0) otherwise
+PUB MagDataOverrun
+' Indicates magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
+'   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
     result := $00
     readReg(SLAVE_MAG, core#ST1, 1, @result)
-    result := ((result >> 1) & %1) * TRUE
+    result := ((result >> core#FLD_DOR) & %1) * TRUE
 
 PUB MeasureMag
 ' Perform magnetometer measurement
