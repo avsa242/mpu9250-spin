@@ -170,6 +170,11 @@ PUB MagOverflow
     readReg(SLAVE_MAG, core#ST2, 1, @result)
     result := ((result >> core#FLD_HOFL) & %1) * TRUE
 
+PUB MagSoftReset | tmp
+' Perform soft-reset of magnetometer: initialize all registers
+    tmp := %1 & core#CNTL2_MASK
+    writeReg(SLAVE_MAG, core#CNTL2, 1, @tmp)
+
 PUB MeasureMag
 ' Perform magnetometer measurement
     OpModeMag(SINGLE)
