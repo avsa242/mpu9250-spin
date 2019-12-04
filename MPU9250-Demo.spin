@@ -1,10 +1,10 @@
 {
     --------------------------------------------
-    Filename: MPU9250-Test.spin
+    Filename: MPU9250-Demo.spin
     Author: Jesse Burt
-    Description: Test of the MPU9250 driver
+    Description: Demo app for the MPU9250 driver
     Copyright (c) 2019
-    Started Sep 2, 2019
+    Started Dec 2, 2019
     Updated Dec 4, 2019
     See end of file for terms of use.
     --------------------------------------------
@@ -14,11 +14,6 @@ CON
 
     _clkmode    = cfg#_clkmode
     _xinfreq    = cfg#_xinfreq
-
-    COL_REG     = 0
-    COL_SET     = 12
-    COL_READ    = 24
-    COL_PF      = 40
 
     LED         = cfg#LED1
     SCL_PIN     = 28
@@ -31,96 +26,81 @@ OBJ
     ser     : "com.serial.terminal"
     time    : "time"
     io      : "io"
+    int     : "string.integer"
     mpu9250 : "sensor.imu.9dof.mpu9250.i2c"
 
 VAR
 
-    long _fails, _expanded
-    byte _ser_cog, _row
+    long _xl_overflows, _g_overflows, _mag_overflows
+    byte _ser_cog
 
 PUB Main | ax, ay, az
 
     Setup
-    _row := 3
-    ser.Position (0, _row)
-    _expanded := TRUE
+    mpu9250.MagADCRes (16)
+    mpu9250.OpModeMag (mpu9250#CONT2)
 
-    MAGMODE(1)
-    MAGBIT(1)
-
+    repeat
+'        AccelRaw
+'        GyroRaw
+        MagRaw
     FlashLED (LED, 100)
 
-PUB MAGBIT(reps) | tmp, read
+PUB AccelRaw | x, y, z
 
-    _row++
-    repeat reps
-        repeat tmp from 1 to 2
-            mpu9250.MagADCRes (lookup(tmp: 14, 16))
-            read := mpu9250.MagADCRes (-2)
-            Message (string("MAGBIT"), lookup(tmp: 14, 16), read)
+    repeat until mpu9250.DataReadyXLG
+    mpu9250.AccelData (@x, @y, @z)
+    ser.Position (0, 5)                             ' and display
+    ser.Str (string("X: "))
+    ser.Str (int.DecPadded (x, 6))
+    ser.NewLine
+    
+    ser.Str (string("Y: "))
+    ser.Str (int.DecPadded (y, 6))
+    ser.NewLine
 
+    ser.Str (string("Z: "))
+    ser.Str (int.DecPadded (z, 6))
+    ser.NewLine
 
-PUB MAGMODE(reps) | tmp, read
+PUB GyroRaw | x, y, z
 
-    _row++
-    repeat reps
-        repeat tmp from 1 to 7
-            mpu9250.OpModeMag (lookup(tmp: mpu9250#POWERDOWN, mpu9250#SINGLE, mpu9250#CONT1, mpu9250#CONT2, mpu9250#EXT_TRIG, mpu9250#SELFTEST, mpu9250#FUSEACCESS))
-            read := mpu9250.OpModeMag (-2)
-            Message (string("MAGMODE"), lookup(tmp: mpu9250#POWERDOWN, mpu9250#SINGLE, mpu9250#CONT1, mpu9250#CONT2, mpu9250#EXT_TRIG, mpu9250#SELFTEST, mpu9250#FUSEACCESS), read)
+    repeat until mpu9250.DataReadyXLG
+    mpu9250.GyroData (@x, @y, @z)
+    ser.Position (0, 5)                             ' and display
+    ser.Str (string("X: "))
+    ser.Str (int.DecPadded (x, 6))
+    ser.NewLine
+    
+    ser.Str (string("Y: "))
+    ser.Str (int.DecPadded (y, 6))
+    ser.NewLine
 
-    mpu9250.OpModeMag (mpu9250#SINGLE)
+    ser.Str (string("Z: "))
+    ser.Str (int.DecPadded (z, 6))
+    ser.NewLine
 
-PUB TrueFalse(num)
+PUB MagRaw | x, y, z
 
-    case num
-        0: ser.Str (string("FALSE"))
-        -1: ser.Str (string("TRUE"))
-        OTHER: ser.Str (string("???"))
+    repeat until mpu9250.DataReadyMag
+    mpu9250.MagData (@x, @y, @z)
+    ser.Position (0, 5)                             ' and display
+    ser.Str (string("X: "))
+    ser.Str (int.DecPadded (x, 6))
+    ser.NewLine
+    
+    ser.Str (string("Y: "))
+    ser.Str (int.DecPadded (y, 6))
+    ser.NewLine
 
-PUB Message(field, arg1, arg2)
+    ser.Str (string("Z: "))
+    ser.Str (int.DecPadded (z, 6))
+    ser.NewLine
 
-   case _expanded
-        TRUE:
-            ser.PositionX (COL_REG)
-            ser.Str (field)
-
-            ser.PositionX (COL_SET)
-            ser.Str (string("SET: "))
-            ser.Dec (arg1)
-
-            ser.PositionX (COL_READ)
-            ser.Str (string("READ: "))
-            ser.Dec (arg2)
-            ser.Chars (32, 3)
-            ser.PositionX (COL_PF)
-            PassFail (arg1 == arg2)
-            ser.NewLine
-
-        FALSE:
-            ser.Position (COL_REG, _row)
-            ser.Str (field)
-
-            ser.Position (COL_SET, _row)
-            ser.Str (string("SET: "))
-            ser.Dec (arg1)
-
-            ser.Position (COL_READ, _row)
-            ser.Str (string("READ: "))
-            ser.Dec (arg2)
-
-            ser.Position (COL_PF, _row)
-            PassFail (arg1 == arg2)
-            ser.NewLine
-        OTHER:
-            ser.Str (string("DEADBEEF"))
-
-PUB PassFail(num)
-
-    case num
-        0: ser.Str (string("FAIL"))
-        -1: ser.Str (string("PASS"))
-        OTHER: ser.Str (string("???"))
+    ser.Str (string("Overflows: "))
+    ser.Dec (_mag_overflows)
+    if mpu9250.MagDataOverflowed
+        _mag_overflows++
 
 PUB Setup
 
