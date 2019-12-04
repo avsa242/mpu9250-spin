@@ -118,6 +118,7 @@ CON
     ASTC                        = $0C
     ASTC_MASK                   = $40
         FLD_SELF                = 6
+        MASK_SELF               = ASTC_MASK ^ (1 << FLD_SELF)
 
 ' TEST 1 - $0D
 ' TEST 2 - $0E

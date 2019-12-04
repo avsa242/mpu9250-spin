@@ -170,6 +170,24 @@ PUB MagOverflow
     readReg(SLAVE_MAG, core#ST2, 1, @result)
     result := ((result >> core#FLD_HOFL) & %1) * TRUE
 
+PUB MagSelfTestEnabled(enable) | tmp
+' Enable magnetometer self-test mode (generates magnetic field)
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_MAG, core#ASTC, 1, @tmp)
+    case ||enable
+        0, 1:
+            enable := (||enable << core#FLD_SELF) & core#ASTC_MASK
+        OTHER:
+            tmp := (tmp >> core#FLD_SELF) & %1
+            result := tmp * TRUE
+            return
+
+    tmp &= core#MASK_SELF
+    tmp := (tmp | enable)
+    writeReg(SLAVE_MAG, core#ASTC, 1, @tmp)
+
 PUB MagSoftReset | tmp
 ' Perform soft-reset of magnetometer: initialize all registers
     tmp := %1 & core#CNTL2_MASK

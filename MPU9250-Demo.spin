@@ -35,9 +35,10 @@ VAR
     long _xl_overflows, _g_overflows, _mag_overflows
     byte _ser_cog
 
-PUB Main | ax, ay, az
+PUB Main
 
     Setup
+    mpu9250.MagSoftReset
     mpu9250.MagADCRes (16)
     mpu9250.OpModeMag (mpu9250#CONT2)
 
@@ -45,6 +46,7 @@ PUB Main | ax, ay, az
 '        AccelRaw
 '        GyroRaw
         MagRaw
+
     FlashLED (LED, 100)
 
 PUB AccelRaw | x, y, z
