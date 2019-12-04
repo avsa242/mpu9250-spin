@@ -40,6 +40,7 @@ CON
 
 VAR
 
+    byte _mag_sens_adj[3]
 
 OBJ
 
@@ -63,6 +64,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
                 if i2c.present (SLAVE_XLG)                      'Response from device?
                     if DeviceID(SLAVE_XLG) == core#WHO_AM_I_RESP'Is it really an MPU9250?
                         disableI2CMaster                        ' Bypass the internal I2C master so we can read the Mag from the same bus
+                        ReadMagAdj
                         return okay
 
     return FALSE                                                'If we got here, something went wrong
@@ -149,7 +151,9 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])
     tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])
     tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])
-
+'    tmpx := tmpx * (( ((_mag_sens_adj[X_AXIS]-128)*1000) / 2) / 128) + 1
+'    tmpy := tmpy * (( ((_mag_sens_adj[Y_AXIS]-128)*1000) / 2) / 128) + 1
+'    tmpz := tmpz * (( ((_mag_sens_adj[Z_AXIS]-128)*1000) / 2) / 128) + 1
     long[ptr_x] := ~~tmpx
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
@@ -219,6 +223,10 @@ PUB OpModeMag(mode) | tmp
     tmp &= core#MASK_MODE
     tmp := (tmp | mode) & core#CNTL1_MASK
     writeReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+
+PUB ReadMagAdj
+' Read magnetometer factory sensitivity adjustment values
+    readReg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
 
 PRI disableI2CMaster | tmp
 
