@@ -32,6 +32,7 @@ OBJ
 VAR
 
     long _xl_overruns, _g_overruns, _mag_overruns
+    long _xl_overflows, _g_overflows, _mag_overflows
     byte _ser_cog
 
 PUB Main | ax, ay, az
@@ -101,6 +102,12 @@ PUB MagRaw | x, y, z
     ser.Dec (_mag_overruns)
     if mpu9250.MagDataOverrun
         _mag_overruns++
+    ser.NewLine
+
+    ser.Str (string("Overflows: "))
+    ser.Dec (_mag_overflows)
+    if mpu9250.MagOverflow
+        _mag_overflows++
 
 PUB Setup
 

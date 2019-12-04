@@ -161,6 +161,15 @@ PUB MagDataOverrun
     readReg(SLAVE_MAG, core#ST1, 1, @result)
     result := ((result >> core#FLD_DOR) & %1) * TRUE
 
+PUB MagOverflow
+' Indicates magnetometer measurement has overflowed
+'   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
+'   NOTE: If this flag is TRUE, measurement data should not be trusted
+'   NOTE: This bit self-clears when the next measurement starts
+    result := $00
+    readReg(SLAVE_MAG, core#ST2, 1, @result)
+    result := ((result >> core#FLD_HOFL) & %1) * TRUE
+
 PUB MeasureMag
 ' Perform magnetometer measurement
     OpModeMag(SINGLE)
