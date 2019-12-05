@@ -42,6 +42,10 @@ CON
     HIGH                = 0
     LOW                 = 1
 
+' Interrupt output type
+    INT_PP              = 0
+    INT_OD              = 1
+
 VAR
 
     byte _mag_sens_adj[3]
@@ -167,7 +171,7 @@ PUB GyroScale(dps) | tmp
 
 PUB IntActiveState(state) | tmp
 ' Set interrupt pin active state/logic level
-'   Valid values: LOW (1), HIGH (0)
+'   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
     tmp := $00
     readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
@@ -180,6 +184,25 @@ PUB IntActiveState(state) | tmp
 
     tmp &= core#MASK_ACTL
     tmp := (tmp | state) & core#INT_BYPASS_CFG_MASK
+    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+
+PUB IntOutputType(pp_od) | tmp
+' Set interrupt pin output type
+'   Valid values:
+'      *INT_PP (0): Push-pull
+'       INT_OD (0): Open-drain
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    case pp_od
+        INT_PP, INT_OD:
+            pp_od := pp_od << core#FLD_OPEN
+        OTHER:
+            result := (tmp >> core#FLD_OPEN) & %1
+            return
+
+    tmp &= core#MASK_OPEN
+    tmp := (tmp | pp_od) & core#INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
 PUB MagADCRes(bits) | tmp
