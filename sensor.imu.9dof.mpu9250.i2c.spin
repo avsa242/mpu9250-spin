@@ -186,11 +186,30 @@ PUB IntActiveState(state) | tmp
     tmp := (tmp | state) & core#INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
+PUB IntLatchEnabled(enable) | tmp
+' Latch interrupt pin when interrupt asserted
+'   Valid values:
+'      *FALSE (0): Interrupt pin is pulsed (width = 50uS)
+'       TRUE (-1): Interrupt pin is latched, and must be cleared explicitly
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    case ||enable
+        0, 1:
+            enable := (||enable << core#FLD_LATCH_INT_EN)
+        OTHER:
+            result := ((tmp >> core#FLD_LATCH_INT_EN) & %1) * TRUE
+            return
+
+    tmp &= core#MASK_LATCH_INT_EN
+    tmp := (tmp | enable) & core#INT_BYPASS_CFG_MASK
+    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+
 PUB IntOutputType(pp_od) | tmp
 ' Set interrupt pin output type
 '   Valid values:
 '      *INT_PP (0): Push-pull
-'       INT_OD (0): Open-drain
+'       INT_OD (1): Open-drain
 '   Any other value polls the chip and returns the current setting
     tmp := $00
     readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)

@@ -45,6 +45,7 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    LATCH_INT_EN (1)
     OPEN (1)
     ACTL (1)
     ACCEL_FS_SEL (1)
@@ -54,6 +55,15 @@ PUB Main | ax, ay, az
     MAGBIT(1)
     mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB LATCH_INT_EN(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from -1 to 0
+            mpu9250.IntLatchEnabled (tmp)
+            read := mpu9250.IntLatchEnabled (-2)
+            Message (string("LATCH_INT_EN"), tmp, read)
 
 PUB OPEN(reps) | tmp, read
 
