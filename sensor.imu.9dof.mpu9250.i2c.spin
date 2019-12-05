@@ -46,6 +46,10 @@ CON
     INT_PP              = 0
     INT_OD              = 1
 
+' Clear interrupt status options
+    READ_INT_FLAG       = 0
+    ANY                 = 1
+
 VAR
 
     byte _mag_sens_adj[3]
@@ -184,6 +188,25 @@ PUB IntActiveState(state) | tmp
 
     tmp &= core#MASK_ACTL
     tmp := (tmp | state) & core#INT_BYPASS_CFG_MASK
+    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+
+PUB IntClearedBy(method) | tmp
+' Select method by which interrupt status may be cleared
+'   Valid values:
+'      *READ_INT_FLAG (0): Only by reading interrupt flags
+'       ANY (1): By any read operation
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    case method
+        ANY, READ_INT_FLAG:
+            method := method << core#FLD_INT_ANYRD_2CLEAR
+        OTHER:
+            result := (tmp >> core#FLD_INT_ANYRD_2CLEAR) & %1
+            return
+
+    tmp &= core#MASK_INT_ANYRD_2CLEAR
+    tmp := (tmp | method) & core#INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
 PUB IntLatchEnabled(enable) | tmp

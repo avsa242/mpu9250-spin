@@ -16,7 +16,7 @@ CON
     _xinfreq    = cfg#_xinfreq
 
     COL_REG     = 0
-    COL_SET     = COL_REG+14
+    COL_SET     = COL_REG+17
     COL_READ    = COL_SET+12
     COL_PF      = COL_READ+12
 
@@ -45,6 +45,7 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    INT_ANYRD_2CLEAR (1)
     LATCH_INT_EN (1)
     OPEN (1)
     ACTL (1)
@@ -55,6 +56,15 @@ PUB Main | ax, ay, az
     MAGBIT(1)
     mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB INT_ANYRD_2CLEAR(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 0 to 1
+            mpu9250.IntClearedBy (tmp)
+            read := mpu9250.IntClearedBy (-2)
+            Message (string("INT_ANYRD_2CLEAR"), tmp, read)
 
 PUB LATCH_INT_EN(reps) | tmp, read
 
