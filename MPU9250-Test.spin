@@ -45,6 +45,7 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    ACTL_FSYNC (1)
     INT_ANYRD_2CLEAR (1)
     LATCH_INT_EN (1)
     OPEN (1)
@@ -56,6 +57,15 @@ PUB Main | ax, ay, az
     MAGBIT(1)
     mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB ACTL_FSYNC(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 0 to 1
+            mpu9250.FSYNCActiveState (tmp)
+            read := mpu9250.FSYNCActiveState (-2)
+            Message (string("ACTL_FSYNC"), tmp, read)
 
 PUB INT_ANYRD_2CLEAR(reps) | tmp, read
 

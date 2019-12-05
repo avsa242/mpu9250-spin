@@ -142,6 +142,23 @@ PUB DeviceID(sub_device)
         OTHER:
             return FALSE
 
+PUB FSYNCActiveState(state) | tmp
+' Set FSYNC pin active state/logic level
+'   Valid values: LOW (1), *HIGH (0)
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    case state
+        LOW, HIGH:
+            state := state << core#FLD_ACTL_FSYNC
+        OTHER:
+            result := (tmp >> core#FLD_ACTL_FSYNC) & %1
+            return
+
+    tmp &= core#MASK_ACTL_FSYNC
+    tmp := (tmp | state) & core#INT_BYPASS_CFG_MASK
+    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+
 PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read gyro data
     tmp := $00
