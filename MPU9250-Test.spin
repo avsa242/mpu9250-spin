@@ -16,9 +16,9 @@ CON
     _xinfreq    = cfg#_xinfreq
 
     COL_REG     = 0
-    COL_SET     = 12
-    COL_READ    = 24
-    COL_PF      = 40
+    COL_SET     = COL_REG+14
+    COL_READ    = COL_SET+12
+    COL_PF      = COL_READ+12
 
     LED         = cfg#LED1
     SCL_PIN     = 28
@@ -45,12 +45,22 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    ACCEL_FS_SEL (1)
     GYRO_FS_SEL (1)
     MAGASTC(1)
     MAGMODE(1)
     MAGBIT(1)
     mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB ACCEL_FS_SEL(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 1 to 4
+            mpu9250.AccelScale (lookup(tmp: 2, 4, 8, 16))
+            read := mpu9250.AccelScale (-2)
+            Message (string("ACCEL_FS_SEL"), lookup(tmp: 2, 4, 8, 16), read)
 
 PUB GYRO_FS_SEL(reps) | tmp, read
 

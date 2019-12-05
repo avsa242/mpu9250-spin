@@ -35,6 +35,18 @@ CON
         MASK_GYRO_FS_SEL        = GYRO_CFG_MASK ^ (BITS_GYRO_FS_SEL << FLD_GYRO_FS_SEL)
         MASK_FCHOICE_B          = GYRO_CFG_MASK ^ (BITS_FCHOICE_B << FLD_FCHOICE_B)
 
+    ACCEL_CFG                   = $1C
+    ACCEL_CFG_MASK              = $F8
+        FLD_AX_ST_EN            = 7
+        FLD_AY_ST_EN            = 6
+        FLD_AZ_ST_EN            = 5
+        FLD_ACCEL_FS_SEL        = 3
+        BITS_ACCEL_FS_SEL       = %11
+        MASK_AX_ST_EN           = ACCEL_CFG_MASK ^ (1 << FLD_AX_ST_EN)
+        MASK_AY_ST_EN           = ACCEL_CFG_MASK ^ (1 << FLD_AY_ST_EN)
+        MASK_AZ_ST_EN           = ACCEL_CFG_MASK ^ (1 << FLD_AZ_ST_EN)
+        MASK_ACCEL_FS_SEL       = ACCEL_CFG_MASK ^ (BITS_ACCEL_FS_SEL << FLD_ACCEL_FS_SEL)
+
     INT_BYPASS_CFG              = $37
     INT_BYPASS_CFG_MASK         = $FE
         FLD_BYPASS_EN           = 1

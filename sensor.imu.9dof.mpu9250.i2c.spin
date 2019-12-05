@@ -86,6 +86,24 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
+PUB AccelScale(g) | tmp
+' Set accelerometer full-scale range, in g's
+'   Valid values: *2, 4, 8, 16
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#ACCEL_CFG, 1, @tmp)
+    case g
+        2, 4, 8, 16:
+            g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
+        OTHER:
+            tmp := (tmp >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
+            result := lookupz(tmp: 2, 4, 8, 16)
+            return
+
+    tmp &= core#MASK_ACCEL_FS_SEL
+    tmp := (tmp | g) & core#ACCEL_CFG_MASK
+    writeReg(SLAVE_XLG, core#ACCEL_CFG, 1, @tmp)
+
 PUB DataReadyMag
 ' Indicates new magnetometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
