@@ -45,10 +45,30 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    GYRO_FS_SEL (1)
+    MAGASTC(1)
     MAGMODE(1)
     MAGBIT(1)
-
+    mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB GYRO_FS_SEL(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 1 to 4
+            mpu9250.GyroScale (lookup(tmp: 250, 500, 1000, 2000))
+            read := mpu9250.GyroScale (-2)
+            Message (string("GYRO_FS_SEL"), lookup(tmp: 250, 500, 1000, 2000), read)
+
+PUB MAGASTC(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from -1 to 0
+            mpu9250.MagSelfTestEnabled (tmp)
+            read := mpu9250.MagSelfTestEnabled (-2)
+            Message (string("ASTC"), tmp, read)
 
 PUB MAGBIT(reps) | tmp, read
 
@@ -58,7 +78,6 @@ PUB MAGBIT(reps) | tmp, read
             mpu9250.MagADCRes (lookup(tmp: 14, 16))
             read := mpu9250.MagADCRes (-2)
             Message (string("MAGBIT"), lookup(tmp: 14, 16), read)
-
 
 PUB MAGMODE(reps) | tmp, read
 

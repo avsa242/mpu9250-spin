@@ -125,9 +125,27 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
+PUB GyroScale(dps) | tmp
+' Set gyroscope full-scale range, in degrees per second
+'   Valid values: *250, 500, 1000, 2000
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#GYRO_CFG, 1, @tmp)
+    case dps
+        250, 500, 1000, 2000:
+            dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
+        OTHER:
+            tmp := (tmp >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
+            result := lookupz(tmp: 250, 500, 1000, 2000)
+            return
+
+    tmp &= core#MASK_GYRO_FS_SEL
+    tmp := (tmp | dps) & core#GYRO_CFG_MASK
+    writeReg(SLAVE_XLG, core#GYRO_CFG, 1, @tmp)
+
 PUB MagADCRes(bits) | tmp
 ' Set magnetometer ADC resolution, in bits
-'   Valid values: 14, 16
+'   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
     tmp := $00
     readReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
@@ -176,7 +194,7 @@ PUB MagOverflow
 
 PUB MagSelfTestEnabled(enable) | tmp
 ' Enable magnetometer self-test mode (generates magnetic field)
-'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
     tmp := $00
     readReg(SLAVE_MAG, core#ASTC, 1, @tmp)
@@ -204,7 +222,7 @@ PUB MeasureMag
 PUB OpModeMag(mode) | tmp
 ' Set magnetometer operating mode
 '   Valid values:
-'       POWERDOWN (0): Power down
+'      *POWERDOWN (0): Power down
 '       SINGLE (1): Single measurement mode
 '       CONT1 (2): Continuous measurement mode 1
 '       CONT2 (6): Continuous measurement mode 2

@@ -20,6 +20,21 @@ CON
     TREGRW                      = 100               ' ms
 
 ' Accelerometer / Gyroscope registers
+    GYRO_CFG                    = $1B
+    GYRO_CFG_MASK               = $FB
+        FLD_XGYRO_CTEN          = 7
+        FLD_YGYRO_CTEN          = 6
+        FLD_ZGYRO_CTEN          = 5
+        FLD_GYRO_FS_SEL         = 3
+        FLD_FCHOICE_B           = 0
+        BITS_GYRO_FS_SEL        = %11
+        BITS_FCHOICE_B          = %11
+        MASK_XGYRO_CTEN         = GYRO_CFG_MASK ^ (1 << FLD_XGYRO_CTEN)
+        MASK_YGYRO_CTEN         = GYRO_CFG_MASK ^ (1 << FLD_YGYRO_CTEN)
+        MASK_ZGYRO_CTEN         = GYRO_CFG_MASK ^ (1 << FLD_ZGYRO_CTEN)
+        MASK_GYRO_FS_SEL        = GYRO_CFG_MASK ^ (BITS_GYRO_FS_SEL << FLD_GYRO_FS_SEL)
+        MASK_FCHOICE_B          = GYRO_CFG_MASK ^ (BITS_FCHOICE_B << FLD_FCHOICE_B)
+
     INT_BYPASS_CFG              = $37
     INT_BYPASS_CFG_MASK         = $FE
         FLD_BYPASS_EN           = 1
