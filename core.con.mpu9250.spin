@@ -64,6 +64,17 @@ CON
         MASK_OPEN               = INT_BYPASS_CFG_MASK ^ (1 << FLD_OPEN)
         MASK_ACTL               = INT_BYPASS_CFG_MASK ^ (1 << FLD_ACTL)
 
+    INT_ENABLE                  = $38
+    INT_ENABLE_MASK             = $59
+        FLD_WOM_EN              = 6
+        FLD_FIFO_OVERFLOW_EN    = 4
+        FLD_FSYNC_INT_EN        = 3
+        FLD_RAW_RDY_EN          = 0
+        MASK_WOM_EN             = INT_ENABLE_MASK ^ (1 << FLD_WOM_EN)
+        MASK_FIFO_OVERFLOW_EN   = INT_ENABLE_MASK ^ (1 << FLD_FIFO_OVERFLOW_EN)
+        MASK_FSYNC_INT_EN       = INT_ENABLE_MASK ^ (1 << FLD_FSYNC_INT_EN)
+        MASK_RAW_RDY_EN         = INT_ENABLE_MASK ^ (1 << FLD_RAW_RDY_EN)
+
     INT_STATUS                  = $3A
     INT_STATUS_MASK             = $59
         FLD_WOM_INT             = 6
