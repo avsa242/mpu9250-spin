@@ -45,6 +45,7 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    ACTL (1)
     ACCEL_FS_SEL (1)
     GYRO_FS_SEL (1)
     MAGASTC(1)
@@ -52,6 +53,15 @@ PUB Main | ax, ay, az
     MAGBIT(1)
     mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB ACTL(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from 0 to 1
+            mpu9250.IntActiveState (tmp)
+            read := mpu9250.IntActiveState (-2)
+            Message (string("ACTL"), tmp, read)
 
 PUB ACCEL_FS_SEL(reps) | tmp, read
 

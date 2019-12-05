@@ -38,6 +38,10 @@ CON
     SELFTEST            = %1000
     FUSEACCESS          = %1111
 
+' Interrupt active level
+    HIGH                = 0
+    LOW                 = 1
+
 VAR
 
     byte _mag_sens_adj[3]
@@ -160,6 +164,23 @@ PUB GyroScale(dps) | tmp
     tmp &= core#MASK_GYRO_FS_SEL
     tmp := (tmp | dps) & core#GYRO_CFG_MASK
     writeReg(SLAVE_XLG, core#GYRO_CFG, 1, @tmp)
+
+PUB IntActiveState(state) | tmp
+' Set interrupt pin active state/logic level
+'   Valid values: LOW (1), HIGH (0)
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    case state
+        LOW, HIGH:
+            state := state << core#FLD_ACTL
+        OTHER:
+            result := (tmp >> core#FLD_ACTL) & %1
+            return
+
+    tmp &= core#MASK_ACTL
+    tmp := (tmp | state) & core#INT_BYPASS_CFG_MASK
+    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
 PUB MagADCRes(bits) | tmp
 ' Set magnetometer ADC resolution, in bits
