@@ -50,6 +50,12 @@ CON
     READ_INT_FLAG       = 0
     ANY                 = 1
 
+' Interrupt sources
+    INT_WAKE_ON_MOTION  = 64
+    INT_FIFO_OVERFLOW   = 16
+    INT_FSYNC           = 8
+    INT_SENSOR_READY    = 1
+
 VAR
 
     byte _mag_sens_adj[3]
@@ -226,6 +232,16 @@ PUB IntClearedBy(method) | tmp
     tmp := (tmp | method) & core#INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
+PUB Interrupt
+' Indicates one or more interrupts have been asserted
+'   Returns: non-zero result if any interrupts have been asserted:
+'       INT_WAKE_ON_MOTION (64) - Wake on motion interrupt occurred
+'       INT_FIFO_OVERFLOW (16) - FIFO overflowed
+'       INT_FSYNC (8) - FSYNC interrupt occurred
+'       INT_SENSOR_READY (1) - Sensor raw data updated
+    result := $00
+    readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
+
 PUB IntLatchEnabled(enable) | tmp
 ' Latch interrupt pin when interrupt asserted
 '   Valid values:
@@ -253,7 +269,7 @@ PUB IntMask(mask) | tmp
 '           6: Enable interrupt for wake on motion      INT_WAKE_ON_MOTION (64)
 '           4: Enable interrupt for FIFO overflow       INT_FIFO_OVERFLOW) (16)
 '           3: Enable FSYNC interrupt                   INT_FSYNC           (8)
-'           0: Enable raw Sensor Data Ready interrupt   INT_SENSOR_READY    (1)
+'           1: Enable raw Sensor Data Ready interrupt   INT_SENSOR_READY    (1)
 '   Any other value polls the chip and returns the current setting
     tmp := $00
     readReg(SLAVE_XLG, core#INT_ENABLE, 1, @tmp)
