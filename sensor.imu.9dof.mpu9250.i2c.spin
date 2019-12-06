@@ -245,6 +245,27 @@ PUB IntLatchEnabled(enable) | tmp
     tmp := (tmp | enable) & core#INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
+PUB IntMask(mask) | tmp
+' Allow interrupts to assert INT pin, set by mask, or by ORing together symbols shown below
+'   Valid values:
+'       Bits: %x6x43xx0 (bit positions marked 'x' aren't supported by the device; setting any of them to '1' will be considered invalid and will query the current setting, instead)
+'               Function                                Symbol              Value
+'           6: Enable interrupt for wake on motion      INT_WAKE_ON_MOTION (64)
+'           4: Enable interrupt for FIFO overflow       INT_FIFO_OVERFLOW) (16)
+'           3: Enable FSYNC interrupt                   INT_FSYNC           (8)
+'           0: Enable raw Sensor Data Ready interrupt   INT_SENSOR_READY    (1)
+'   Any other value polls the chip and returns the current setting
+    tmp := $00
+    readReg(SLAVE_XLG, core#INT_ENABLE, 1, @tmp)
+    case mask & (core#INT_ENABLE_MASK ^ $FF)                                    ' Check the mask param passed to us against the inverse (xor $FF) of the
+        0:                                                                      ' allowed bits(INT_ENABLE_MASK). If only allowed bits are set, the result should be 0
+        OTHER:                                                                  ' and it will be considered valid.
+            result := tmp & core#INT_ENABLE_MASK
+            return
+
+    tmp := mask & core#INT_ENABLE_MASK
+    writeReg(SLAVE_XLG, core#INT_ENABLE, 1, @tmp)
+
 PUB IntOutputType(pp_od) | tmp
 ' Set interrupt pin output type
 '   Valid values:

@@ -45,6 +45,7 @@ PUB Main | ax, ay, az
     ser.Position (0, _row)
     _expanded := TRUE
 
+    INT_EN (1)
     ACTL_FSYNC (1)
     INT_ANYRD_2CLEAR (1)
     LATCH_INT_EN (1)
@@ -57,6 +58,18 @@ PUB Main | ax, ay, az
     MAGBIT(1)
     mpu9250.MagSoftReset
     FlashLED (LED, 100)
+
+PUB INT_EN(reps) | tmp, read
+
+    _row++
+    repeat reps
+        repeat tmp from %0000000 to %0101_1001
+            if tmp & $A6
+                next
+            mpu9250.IntMask (tmp)
+            read := mpu9250.IntMask (-2)
+            Message (string("INT_EN"), tmp, read)
+
 
 PUB ACTL_FSYNC(reps) | tmp, read
 
