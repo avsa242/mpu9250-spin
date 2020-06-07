@@ -114,6 +114,16 @@ CON
         MASK_I2C_MST_EN         = USER_CTRL_MASK ^ (1 << FLD_I2C_MST_EN)
         MASK_FIFO_EN            = USER_CTRL_MASK ^ (1 << FLD_FIFO_EN)
 
+    PWR_MGMT_2                  = $6C
+    PWR_MGMT_2_MASK             = $3F
+        FLD_DISABLE_XYZA        = 3
+        FLD_DISABLE_XYZG        = 0
+        BITS_DISABLE_XYZA       = %111
+        BITS_DISABLE_XYZG       = %111
+        MASK_DISABLE_XYZA       = PWR_MGMT_2_MASK ^ (BITS_DISABLE_XYZA << FLD_DISABLE_XYZA)
+        MASK_DISABLE_XYZG       = PWR_MGMT_2_MASK ^ (BITS_DISABLE_XYZG << FLD_DISABLE_XYZG)
+        DISABLE_INVERT          = %111
+
     WHO_AM_I                    = $75
     WHO_AM_I_RESP               = $71
 

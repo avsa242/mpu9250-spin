@@ -45,34 +45,39 @@ PUB Main | dispmode
 
     Setup
 
-'    imu.AccelADCRes(10)                                   ' 8, 10, 12 (low-power, normal, high-res, resp.)
-    imu.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
-'    imu.AccelDataRate(100)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
-'    imu.AccelAxisEnabled(%111)                            ' 0 or 1 for each bit (%xyz)
+'    imu.AccelADCRes(10)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
+    imu.AccelScale(2)                                       ' 2, 4, 8, 16 (g's)
+'    imu.AccelDataRate(100)                                  ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
+    imu.AccelAxisEnabled(%111)                              ' 0 or 1 for each bit (%xyz)
 
     imu.GyroScale(250)                                      ' 250, 500, 1000, 2000
+    imu.GyroAxisEnabled(%111)                               ' 0 or 1 for each bit (%xyz)
 
+    imu.IntMask(%00000000)
     ser.HideCursor
     dispmode := 0
 
     ser.position(0, 3)                                      ' Read back the settings from above
     ser.str(string("AccelScale: "))                         '
-    ser.dec(imu.AccelScale(-2))                           '
+    ser.dec(imu.AccelScale(-2))                             '
     ser.newline                                             '
 '    ser.str(string("AccelADCRes: "))                        '
-'    ser.dec(imu.AccelADCRes(-2))                          '
+'    ser.dec(imu.AccelADCRes(-2))                            '
 '    ser.newline                                             '
 '    ser.str(string("AccelDataRate: "))                      '
-'    ser.dec(imu.AccelDataRate(-2))                        '
+'    ser.dec(imu.AccelDataRate(-2))                          '
 '    ser.newline                                             '
+    ser.str(string("GyroScale: "))                         '
+    ser.dec(imu.GyroScale(-2))                             '
+    ser.newline                                             '
 '    ser.str(string("FIFOMode: "))                           '
-'    ser.dec(imu.FIFOMode(-2))                             '
+'    ser.dec(imu.FIFOMode(-2))                               '
 '    ser.newline                                             '
 '    ser.str(string("IntThresh: "))                          '
-'    ser.dec(imu.IntThresh(-2))                            '
+'    ser.dec(imu.IntThresh(-2))                              '
 '    ser.newline                                             '
     ser.str(string("IntMask: "))                            '
-    ser.bin(imu.IntMask(-2), 6)                           '
+    ser.bin(imu.IntMask(-2), 6)                             '
     ser.newline                                             '
 
     repeat
