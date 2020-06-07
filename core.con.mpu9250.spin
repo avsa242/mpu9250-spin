@@ -114,6 +114,11 @@ CON
         MASK_I2C_MST_EN         = USER_CTRL_MASK ^ (1 << FLD_I2C_MST_EN)
         MASK_FIFO_EN            = USER_CTRL_MASK ^ (1 << FLD_FIFO_EN)
 
+    PWR_MGMT_1                  = $6B
+    PWR_MGMT_1_MASK             = $FF
+        FLD_H_RESET             = 7
+        MASK_H_RESET            = PWR_MGMT_1_MASK ^ (1 << FLD_H_RESET)
+
     PWR_MGMT_2                  = $6C
     PWR_MGMT_2_MASK             = $3F
         FLD_DISABLE_XYZA        = 3

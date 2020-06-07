@@ -510,6 +510,11 @@ PUB ReadMagAdj
 ' Read magnetometer factory sensitivity adjustment values
     readReg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
 
+PUB Reset
+' Perform soft-reset
+    MagSoftReset
+    XLGSoftReset
+
 PUB Temperature
 ' Read temperature, in hundredths of a degree
     result := $00
@@ -542,6 +547,11 @@ PUB XLGDataReady
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
     result := (result & %1) * TRUE
+
+PUB XLGSoftReset | tmp
+' Perform soft-reset of accelerometer and gyro: initialize all registers
+    tmp := 1 << core#FLD_H_RESET
+    writeReg(SLAVE_XLG, core#PWR_MGMT_1, 1, @tmp)
 
 PRI disableI2CMaster | tmp
 
