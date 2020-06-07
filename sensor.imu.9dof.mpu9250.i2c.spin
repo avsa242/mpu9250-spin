@@ -3,9 +3,9 @@
     Filename: sensor.imu.9dof.mpu9250.i2c.spin
     Author: Jesse Burt
     Description: Driver for the InvenSense MPU9250
-    Copyright (c) 2019
+    Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Dec 4, 2019
+    Updated Jun 7, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -32,8 +32,8 @@ CON
 ' Magnetometer operating modes
     POWERDOWN           = %0000
     SINGLE              = %0001
-    CONT1               = %0010
-    CONT2               = %0110
+    CONT8               = %0010
+    CONT100             = %0110
     EXT_TRIG            = %0100
     SELFTEST            = %1000
     FUSEACCESS          = %1111
@@ -56,15 +56,21 @@ CON
     INT_FSYNC           = 8
     INT_SENSOR_READY    = 1
 
+' Temperature scales
+    C                   = 0
+    F                   = 1
+
 VAR
 
-    byte _mag_sens_adj[3]
+    long _mag_sens_adj[3]
+    word _accel_cnts_per_lsb, _gyro_cnts_per_lsb, _mag_cnts_per_lsb
+    byte _temp_scale
 
 OBJ
 
-    i2c : "com.i2c"                                             'PASM I2C Driver
-    core: "core.con.mpu9250.spin"                           'File containing your device's register set
-    time: "time"                                                'Basic timing functions
+    i2c : "com.i2c"
+    core: "core.con.mpu9250.spin"
+    time: "time"
 
 PUB Null
 ''This is not a top-level object
@@ -83,9 +89,18 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
                     if DeviceID(SLAVE_XLG) == core#WHO_AM_I_RESP'Is it really an MPU9250?
                         disableI2CMaster                        ' Bypass the internal I2C master so we can read the Mag from the same bus
                         ReadMagAdj
+                        MagSoftReset
                         return okay
 
     return FALSE                                                'If we got here, something went wrong
+
+PUB Defaults
+
+    AccelScale(2)
+    GyroScale(250)
+    MagOpMode(CONT100)
+    MagADCRes(16)
+    TempScale(C)
 
 PUB Stop
 ' Put any other housekeeping code here required/recommended by your device before shutting down
@@ -104,6 +119,18 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
+PUB AccelDataReady
+
+    return XLGDataReady
+
+PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+' Read accelerometer data, calculated
+'   Returns: Linear acceleration in millionths of a g
+    AccelData(@tmpx, @tmpy, @tmpz)
+    long[ptr_x] := (tmpx * _accel_cnts_per_lsb)
+    long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
+    long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
+
 PUB AccelScale(g) | tmp
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
@@ -113,6 +140,7 @@ PUB AccelScale(g) | tmp
     case g
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
+            _accel_cnts_per_lsb := lookupz(g >> core#FLD_ACCEL_FS_SEL: 61{598}, 122{1197}, 244{2394}, 488{4788})
         OTHER:
             tmp := (tmp >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
             result := lookupz(tmp: 2, 4, 8, 16)
@@ -121,18 +149,6 @@ PUB AccelScale(g) | tmp
     tmp &= core#MASK_ACCEL_FS_SEL
     tmp := (tmp | g) & core#ACCEL_CFG_MASK
     writeReg(SLAVE_XLG, core#ACCEL_CFG, 1, @tmp)
-
-PUB DataReadyMag
-' Indicates new magnetometer data is ready to be read
-'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    readReg(SLAVE_MAG, core#ST1, 1, @result)
-    result := (result & %1) * TRUE
-
-PUB DataReadyXLG
-' Indicates new gyroscope/accelerometer data is ready to be read
-'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
-    result := (result & %1) * TRUE
 
 PUB DeviceID(sub_device)
 ' Read device ID from sub_device
@@ -178,6 +194,17 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
+PUB GyroDataReady
+
+    return XLGDataReady
+
+PUB GyroDPS(gx, gy, gz) | tmpX, tmpY, tmpZ
+
+    GyroData(@tmpX, @tmpY, @tmpZ)
+    long[gx] := (tmpX * _gyro_cnts_per_lsb)' / 10
+    long[gy] := (tmpY * _gyro_cnts_per_lsb)' / 10
+    long[gz] := (tmpZ * _gyro_cnts_per_lsb)' / 10
+
 PUB GyroScale(dps) | tmp
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
@@ -187,6 +214,7 @@ PUB GyroScale(dps) | tmp
     case dps
         250, 500, 1000, 2000:
             dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
+            _gyro_cnts_per_lsb := lookupz(dps >> core#FLD_GYRO_FS_SEL: 7629, 15_258, 30_517, 61_035)  ' XXX unverified
         OTHER:
             tmp := (tmp >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
             result := lookupz(tmp: 250, 500, 1000, 2000)
@@ -324,9 +352,9 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     tmp := $00
     readReg(SLAVE_MAG, core#HXL, 7, @tmp)
 
-    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])
-    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])
-    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])
+    tmpx := (((tmp.byte[0] << 8) | (tmp.byte[1])))
+    tmpy := (((tmp.byte[2] << 8) | (tmp.byte[3])))
+    tmpz := (((tmp.byte[4] << 8) | (tmp.byte[5])))
 '    tmpx := tmpx * (( ((_mag_sens_adj[X_AXIS]-128)*1000) / 2) / 128) + 1
 '    tmpy := tmpy * (( ((_mag_sens_adj[Y_AXIS]-128)*1000) / 2) / 128) + 1
 '    tmpz := tmpz * (( ((_mag_sens_adj[Z_AXIS]-128)*1000) / 2) / 128) + 1
@@ -341,6 +369,37 @@ PUB MagDataOverrun
     readReg(SLAVE_MAG, core#ST1, 1, @result)
     result := ((result >> core#FLD_DOR) & %1) * TRUE
 
+PUB MagDataRate(Hz)
+' Set magnetometer output data rate, in Hz
+'   Valid values: 8, 100
+'   Any other value polls the chip and returns the current setting
+'   NOTE: This setting switches to/only affects continuous measurement mode
+    case Hz
+        8:
+            MagOpMode(CONT8)
+        100:
+            MagOpMode(CONT100)
+        OTHER:
+            case MagOpMode(-2)
+                CONT8:
+                    return 8
+                CONT100:
+                    return 100
+
+PUB MagDataReady
+' Indicates new magnetometer data is ready to be read
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    result := 0
+    readReg(SLAVE_MAG, core#ST1, 1, @result)
+    result := (result & %1) * TRUE
+
+PUB MagGauss(mx, my, mz) | tmpX, tmpY, tmpZ
+
+    MagData(@tmpX, @tmpY, @tmpZ)
+    long[mx] := (tmpX * _mag_cnts_per_lsb)
+    long[my] := (tmpY * _mag_cnts_per_lsb)
+    long[mz] := (tmpZ * _mag_cnts_per_lsb)
+
 PUB MagOverflow
 ' Indicates magnetometer measurement has overflowed
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
@@ -349,6 +408,19 @@ PUB MagOverflow
     result := $00
     readReg(SLAVE_MAG, core#ST2, 1, @result)
     result := ((result >> core#FLD_HOFL) & %1) * TRUE
+
+PUB MagScale(scale) ' XXX PRELIMINARY
+' Set full-scale range of magnetometer, in bits
+'   Valid values: 14, 16
+    case scale
+        14:
+            _mag_cnts_per_lsb := 5_997
+        16:
+            _mag_cnts_per_lsb := 1_499
+        OTHER:
+            return
+
+    MagADCRes(scale)
 
 PUB MagSelfTestEnabled(enable) | tmp
 ' Enable magnetometer self-test mode (generates magnetic field)
@@ -375,15 +447,15 @@ PUB MagSoftReset | tmp
 
 PUB MeasureMag
 ' Perform magnetometer measurement
-    OpModeMag(SINGLE)
+    MagOpMode(SINGLE)
 
-PUB OpModeMag(mode) | tmp
+PUB MagOpMode(mode) | tmp
 ' Set magnetometer operating mode
 '   Valid values:
 '      *POWERDOWN (0): Power down
 '       SINGLE (1): Single measurement mode
-'       CONT1 (2): Continuous measurement mode 1
-'       CONT2 (6): Continuous measurement mode 2
+'       CONT8 (2): Continuous measurement mode, 8Hz updates
+'       CONT100 (6): Continuous measurement mode, 100Hz updates
 '       EXT_TRIG (4): External trigger measurement mode
 '       SELFTEST (8): Self-test mode
 '       FUSEACCESS (15): Fuse ROM access mode
@@ -391,7 +463,7 @@ PUB OpModeMag(mode) | tmp
     tmp := $00
     readReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
     case mode
-        POWERDOWN, SINGLE, CONT1, CONT2, EXT_TRIG, SELFTEST, FUSEACCESS:
+        POWERDOWN, SINGLE, CONT8, CONT100, EXT_TRIG, SELFTEST, FUSEACCESS:
         OTHER:
             result := tmp & core#BITS_MODE
             return
@@ -403,6 +475,39 @@ PUB OpModeMag(mode) | tmp
 PUB ReadMagAdj
 ' Read magnetometer factory sensitivity adjustment values
     readReg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
+
+PUB Temperature
+' Read temperature, in hundredths of a degree
+    result := $00
+    readReg(SLAVE_XLG, core#TEMP_OUT_H, 2, @result)
+    result.byte[3] := result.byte[0]    'Swap byte order
+    result.byte[0] := result.byte[1]
+    result.byte[1] := result.byte[3]
+    result.byte[3] := 0
+
+    case _temp_scale
+        F:
+        OTHER:
+            result := (( (result * 1_0000) - 7_00) / 333_87) + 21_00
+            return
+
+PUB TempScale(scale)
+' Set temperature scale used by Temperature method
+'   Valid values:
+'       C (0): Celsius
+'       F (1): Fahrenheit
+'   Any other value returns the current setting
+    case scale
+        C, F:
+            _temp_scale := scale
+        OTHER:
+            return _temp_scale
+
+PUB XLGDataReady
+' Indicates new gyroscope/accelerometer data is ready to be read
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
+    result := (result & %1) * TRUE
 
 PRI disableI2CMaster | tmp
 

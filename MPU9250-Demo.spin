@@ -2,135 +2,209 @@
     --------------------------------------------
     Filename: MPU9250-Demo.spin
     Author: Jesse Burt
-    Description: Demo app for the MPU9250 driver
-    Copyright (c) 2019
-    Started Dec 2, 2019
-    Updated Dec 4, 2019
+    Description: Demo of the MPU9250 driver
+    Copyright (c) 2020
+    Started Sep 2, 2019
+    Updated Jun 7, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
-
+' Uncomment one of the following to choose which interface the MPU9250 is connected to
+'#define MPU9250_I2C
+#define MPU9250_SPI
 CON
 
     _clkmode    = cfg#_clkmode
     _xinfreq    = cfg#_xinfreq
 
+' -- User-modifiable constants
     LED         = cfg#LED1
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_HZ      = 400_000
+    SER_RX      = 31
+    SER_TX      = 30
+    SER_BAUD    = 115_200
+
+    SCL_PIN     = 5                                        ' SPI, I2C
+    SDA_PIN     = 4                                        ' SPI, I2C
+    I2C_HZ      = 400_000                                  ' I2C
+' --
 
 OBJ
 
     cfg     : "core.con.boardcfg.flip"
-    ser     : "com.serial.terminal"
+    ser     : "com.serial.terminal.ansi"
     time    : "time"
     io      : "io"
     int     : "string.integer"
-    mpu9250 : "sensor.imu.9dof.mpu9250.i2c"
+    imu     : "sensor.imu.9dof.mpu9250.i2c"
 
 VAR
 
-    long _xl_overruns, _g_overruns, _mag_overruns
-    long _xl_overflows, _g_overflows, _mag_overflows
-    byte _ser_cog
+    long _overruns
 
-PUB Main
+PUB Main | dispmode
 
     Setup
-    mpu9250.MagSoftReset
-    mpu9250.MagADCRes (16)
-    mpu9250.OpModeMag (mpu9250#CONT2)
+
+'    imu.AccelADCRes(10)                                   ' 8, 10, 12 (low-power, normal, high-res, resp.)
+    imu.AccelScale(2)                                     ' 2, 4, 8, 16 (g's)
+'    imu.AccelDataRate(100)                                ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
+'    imu.AccelAxisEnabled(%111)                            ' 0 or 1 for each bit (%xyz)
+
+    imu.GyroScale(250)                                      ' 250, 500, 1000, 2000
+
+    ser.HideCursor
+    dispmode := 0
+
+    ser.position(0, 3)                                      ' Read back the settings from above
+    ser.str(string("AccelScale: "))                         '
+    ser.dec(imu.AccelScale(-2))                           '
+    ser.newline                                             '
+'    ser.str(string("AccelADCRes: "))                        '
+'    ser.dec(imu.AccelADCRes(-2))                          '
+'    ser.newline                                             '
+'    ser.str(string("AccelDataRate: "))                      '
+'    ser.dec(imu.AccelDataRate(-2))                        '
+'    ser.newline                                             '
+'    ser.str(string("FIFOMode: "))                           '
+'    ser.dec(imu.FIFOMode(-2))                             '
+'    ser.newline                                             '
+'    ser.str(string("IntThresh: "))                          '
+'    ser.dec(imu.IntThresh(-2))                            '
+'    ser.newline                                             '
+    ser.str(string("IntMask: "))                            '
+    ser.bin(imu.IntMask(-2), 6)                           '
+    ser.newline                                             '
 
     repeat
-'        AccelRaw
-'        GyroRaw
-        MagRaw
+        case ser.RxCheck
+            "q", "Q":                                       ' Quit the demo
+                ser.Position(0, 15)
+                ser.str(string("Halting"))
+                imu.Stop
+                time.MSleep(5)
+                ser.Stop
+                quit
+            "c", "C":                                       ' Perform calibration
+                Calibrate
+            "r", "R":                                       ' Change display mode: raw/calculated
+                ser.Position(0, 10)
+                repeat 2
+                    ser.ClearLine(ser#CLR_CUR_TO_END)
+                    ser.Newline
+                dispmode ^= 1
 
-    FlashLED (LED, 100)
+        ser.Position (0, 10)
+        case dispmode
+            0:
+                AccelRaw
+                GyroRaw
+                MagRaw
+            1:
+                AccelCalc
+                GyroCalc
+                MagCalc
 
-PUB AccelRaw | x, y, z
+        ser.position (0, 15)
+        ser.str(string("Interrupt: "))
+        ser.str(lookupz(imu.Interrupt >> 6: string("No "), string("Yes")))
 
-    repeat until mpu9250.DataReadyXLG
-    mpu9250.AccelData (@x, @y, @z)
-    ser.Position (0, 5)                             ' and display
-    ser.Str (string("X: "))
-    ser.Str (int.DecPadded (x, 6))
-    ser.NewLine
-    
-    ser.Str (string("Y: "))
-    ser.Str (int.DecPadded (y, 6))
-    ser.NewLine
+    ser.ShowCursor
+    FlashLED(LED, 100)
 
-    ser.Str (string("Z: "))
-    ser.Str (int.DecPadded (z, 6))
-    ser.NewLine
+PUB AccelCalc | ax, ay, az
 
-PUB GyroRaw | x, y, z
+    repeat until imu.AccelDataReady
+    imu.AccelG (@ax, @ay, @az)
+'    if imu.AccelDataOverrun
+'        _overruns++
+    ser.Str (string("Accel micro-g: "))
+    ser.Str (int.DecPadded (ax, 10))
+    ser.Str (int.DecPadded (ay, 10))
+    ser.Str (int.DecPadded (az, 10))
+    ser.Newline
+'    ser.Str (string("Overruns: "))
+'    ser.Dec (_overruns)
 
-    repeat until mpu9250.DataReadyXLG
-    mpu9250.GyroData (@x, @y, @z)
-    ser.Position (0, 5)                             ' and display
-    ser.Str (string("X: "))
-    ser.Str (int.DecPadded (x, 6))
-    ser.NewLine
-    
-    ser.Str (string("Y: "))
-    ser.Str (int.DecPadded (y, 6))
-    ser.NewLine
+PUB AccelRaw | ax, ay, az
 
-    ser.Str (string("Z: "))
-    ser.Str (int.DecPadded (z, 6))
-    ser.NewLine
+    repeat until imu.AccelDataReady
+    imu.AccelData (@ax, @ay, @az)
+'    if imu.AccelDataOverrun
+'        _overruns++
+    ser.Str (string("Raw Accel: "))
+    ser.Str (int.DecPadded (ax, 7))
+    ser.Str (int.DecPadded (ay, 7))
+    ser.Str (int.DecPadded (az, 7))
+    ser.Newline
+'    ser.Str (string("Overruns: "))
+'    ser.Dec (_overruns)
+'    ser.newline
 
-PUB MagRaw | x, y, z
+PUB GyroCalc | gx, gy, gz
 
-    repeat until mpu9250.DataReadyMag
-    mpu9250.MagData (@x, @y, @z)
-    ser.Position (0, 5)                             ' and display
-    ser.Str (string("X: "))
-    ser.Str (int.DecPadded (x, 6))
-    ser.NewLine
-    
-    ser.Str (string("Y: "))
-    ser.Str (int.DecPadded (y, 6))
-    ser.NewLine
+    repeat until imu.GyroDataReady
+    imu.GyroDPS (@gx, @gy, @gz)
+    ser.Str (string("Gyro:  "))
+    ser.Str (int.DecPadded (gx, 11))
+    ser.Str (int.DecPadded (gy, 11))
+    ser.Str (int.DecPadded (gz, 11))
+    ser.newline
 
-    ser.Str (string("Z: "))
-    ser.Str (int.DecPadded (z, 6))
-    ser.NewLine
+PUB GyroRaw | gx, gy, gz
 
-    ser.Str (string("Overruns: "))
-    ser.Dec (_mag_overruns)
-    if mpu9250.MagDataOverrun
-        _mag_overruns++
-    ser.NewLine
+    repeat until imu.GyroDataReady
+    imu.GyroData (@gx, @gy, @gz)
+    ser.Str (string("Gyro:  "))
+    ser.Str (int.DecPadded (gx, 7))
+    ser.Str (int.DecPadded (gy, 7))
+    ser.Str (int.DecPadded (gz, 7))
+    ser.newline
 
-    ser.Str (string("Overflows: "))
-    ser.Dec (_mag_overflows)
-    if mpu9250.MagOverflow
-        _mag_overflows++
+PUB MagCalc | mx, my, mz
+
+    repeat until imu.MagDataReady
+    imu.MagGauss (@mx, @my, @mz)
+    ser.Str (string("Mag:   "))
+    ser.Str (int.DecPadded (mx, 10))
+    ser.Str (int.DecPadded (my, 10))
+    ser.Str (int.DecPadded (mz, 10))
+    ser.newline
+
+PUB MagRaw | mx, my, mz
+
+    repeat until imu.MagDataReady
+    imu.MagData (@mx, @my, @mz)
+    ser.Str (string("Mag:  "))
+    ser.Str (int.DecPadded (mx, 7))
+    ser.Str (int.DecPadded (my, 7))
+    ser.Str (int.DecPadded (mz, 7))
+    ser.newline
+
+PUB Calibrate
+
+    ser.Position (0, 12)
+    ser.Str(string("Calibrating..."))
+'    imu.Calibrate
+    ser.Position (0, 12)
+    ser.Str(string("              "))
 
 PUB Setup
 
-    repeat until _ser_cog := ser.Start (115_200)
+    repeat until ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
+    time.MSleep(30)
     ser.Clear
-    ser.Str(string("Serial terminal started", ser#NL))
-    if mpu9250.Startx (SCL_PIN, SDA_PIN, I2C_HZ)
-        ser.Str (string("MPU9250 driver started", ser#NL))
+    ser.Str(string("Serial terminal started", ser#CR, ser#LF))
+    if imu.Startx(SCL_PIN, SDA_PIN, I2C_HZ)
+        imu.Defaults
+        ser.str(string("MPU9250 driver started (I2C)", ser#CR, ser#LF))
     else
-        ser.Str (string("MPU9250 driver failed to start - halting", ser#NL))
-        mpu9250.Stop
-        time.MSleep (500)
+        ser.str(string("MPU9250 driver failed to start - halting", ser#CR, ser#LF))
+        imu.Stop
+        time.MSleep(5)
         ser.Stop
-        FlashLED (LED, 500)
+        FlashLED(LED, 500)
 
-PUB FlashLED(led_pin, delay_ms)
-
-    io.Output (led_pin)
-    repeat
-        io.Toggle (led_pin)
-        time.MSleep (delay_ms)
+#include "lib.utility.spin"
 
 DAT
 {
