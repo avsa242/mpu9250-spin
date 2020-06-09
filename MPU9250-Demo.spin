@@ -5,13 +5,13 @@
     Description: Demo of the MPU9250 driver
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 7, 2020
+    Updated Jun 9, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
 ' Uncomment one of the following to choose which interface the MPU9250 is connected to
 '#define MPU9250_I2C
-#define MPU9250_SPI
+'#define MPU9250_SPI    NOT IMPLEMENTED YET
 CON
 
     _clkmode    = cfg#_clkmode
@@ -50,8 +50,10 @@ PUB Main | dispmode
 '    imu.AccelDataRate(100)                                  ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
     imu.AccelAxisEnabled(%111)                              ' 0 or 1 for each bit (%xyz)
 
-    imu.GyroScale(250)                                      ' 250, 500, 1000, 2000
+    imu.GyroScale(500)                                      ' 250, 500, 1000, 2000
     imu.GyroAxisEnabled(%111)                               ' 0 or 1 for each bit (%xyz)
+
+    imu.MagScale(16)                                        ' 14, 16 (bits)
 
     imu.IntMask(%00000000)
     ser.HideCursor
@@ -69,6 +71,9 @@ PUB Main | dispmode
 '    ser.newline                                             '
     ser.str(string("GyroScale: "))                         '
     ser.dec(imu.GyroScale(-2))                             '
+    ser.newline                                             '
+    ser.str(string("MagScale: "))                         '
+    ser.dec(imu.MagScale(-2))                             '
     ser.newline                                             '
 '    ser.str(string("FIFOMode: "))                           '
 '    ser.dec(imu.FIFOMode(-2))                               '
@@ -126,6 +131,7 @@ PUB AccelCalc | ax, ay, az
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
     ser.Str (int.DecPadded (az, 10))
+    ser.clearline(ser#CLR_CUR_TO_END)
     ser.Newline
 '    ser.Str (string("Overruns: "))
 '    ser.Dec (_overruns)
@@ -136,10 +142,11 @@ PUB AccelRaw | ax, ay, az
     imu.AccelData (@ax, @ay, @az)
 '    if imu.AccelDataOverrun
 '        _overruns++
-    ser.Str (string("Raw Accel: "))
+    ser.Str (string("Accel raw: "))
     ser.Str (int.DecPadded (ax, 7))
     ser.Str (int.DecPadded (ay, 7))
     ser.Str (int.DecPadded (az, 7))
+    ser.clearline(ser#CLR_CUR_TO_END)
     ser.Newline
 '    ser.Str (string("Overruns: "))
 '    ser.Dec (_overruns)
@@ -149,48 +156,52 @@ PUB GyroCalc | gx, gy, gz
 
     repeat until imu.GyroDataReady
     imu.GyroDPS (@gx, @gy, @gz)
-    ser.Str (string("Gyro:  "))
+    ser.Str (string("Gyro micro DPS:  "))
     ser.Str (int.DecPadded (gx, 11))
     ser.Str (int.DecPadded (gy, 11))
     ser.Str (int.DecPadded (gz, 11))
+    ser.clearline(ser#CLR_CUR_TO_END)
     ser.newline
 
 PUB GyroRaw | gx, gy, gz
 
     repeat until imu.GyroDataReady
     imu.GyroData (@gx, @gy, @gz)
-    ser.Str (string("Gyro:  "))
+    ser.Str (string("Gyro raw:  "))
     ser.Str (int.DecPadded (gx, 7))
     ser.Str (int.DecPadded (gy, 7))
     ser.Str (int.DecPadded (gz, 7))
+    ser.clearline(ser#CLR_CUR_TO_END)
     ser.newline
 
 PUB MagCalc | mx, my, mz
 
     repeat until imu.MagDataReady
-    imu.MagGauss (@mx, @my, @mz)
-    ser.Str (string("Mag:   "))
+    imu.MagTesla (@mx, @my, @mz)
+    ser.Str (string("Mag nano T:   "))
     ser.Str (int.DecPadded (mx, 10))
     ser.Str (int.DecPadded (my, 10))
     ser.Str (int.DecPadded (mz, 10))
+    ser.clearline(ser#CLR_CUR_TO_END)
     ser.newline
 
 PUB MagRaw | mx, my, mz
 
     repeat until imu.MagDataReady
     imu.MagData (@mx, @my, @mz)
-    ser.Str (string("Mag:  "))
+    ser.Str (string("Mag raw:  "))
     ser.Str (int.DecPadded (mx, 7))
     ser.Str (int.DecPadded (my, 7))
     ser.Str (int.DecPadded (mz, 7))
+    ser.clearline(ser#CLR_CUR_TO_END)
     ser.newline
 
 PUB Calibrate
 
-    ser.Position (0, 12)
+    ser.Position (0, 14)
     ser.Str(string("Calibrating..."))
 '    imu.Calibrate
-    ser.Position (0, 12)
+    ser.Position (0, 14)
     ser.Str(string("              "))
 
 PUB Setup

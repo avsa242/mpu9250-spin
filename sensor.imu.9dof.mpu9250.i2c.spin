@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 7, 2020
+    Updated Jun 9, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -99,7 +99,7 @@ PUB Defaults
     AccelScale(2)
     GyroScale(250)
     MagOpMode(CONT100)
-    MagADCRes(16)
+    MagScale(16)
     TempScale(C)
 
 PUB Stop
@@ -427,12 +427,20 @@ PUB MagDataReady
     readReg(SLAVE_MAG, core#ST1, 1, @result)
     result := (result & %1) * TRUE
 
-PUB MagGauss(mx, my, mz) | tmpX, tmpY, tmpZ
+PUB MagGauss(mx, my, mz) | tmpX, tmpY, tmpZ ' XXX unverified
 
     MagData(@tmpX, @tmpY, @tmpZ)
     long[mx] := (tmpX * _mag_cnts_per_lsb)
     long[my] := (tmpY * _mag_cnts_per_lsb)
     long[mz] := (tmpZ * _mag_cnts_per_lsb)
+
+PUB MagTesla(mx, my, mz) | tmpX, tmpY, tmpZ
+' Read magnetomer data, calculated
+'   Returns: Magnetic field strength, in thousandths of a micro-Tesla/nano-Tesla (i.e., 12000 = 12uT)
+    MagData(@tmpX, @tmpY, @tmpZ)
+    long[mx] := (((tmpX * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[my] := (((tmpY * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[mz] := (((tmpZ * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
 
 PUB MagOverflow
 ' Indicates magnetometer measurement has overflowed
