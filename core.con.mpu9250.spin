@@ -3,9 +3,9 @@
     Filename: core.con.mpu9250.spin
     Author: Jesse Burt
     Description: Low-level constants
-    Copyright (c) 2019
+    Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Dec 4, 2019
+    Updated Jun 11, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -20,6 +20,10 @@ CON
     TREGRW                      = 100               ' ms
 
 ' Accelerometer / Gyroscope registers
+    XG_OFFS_USR                 = $13                       '..$14 (LSB)
+    YG_OFFS_USR                 = $15                       '..$16 (LSB)
+    ZG_OFFS_USR                 = $17                       '..$18 (LSB
+
     GYRO_CFG                    = $1B
     GYRO_CFG_MASK               = $FB
         FLD_XGYRO_CTEN          = 7
@@ -131,6 +135,10 @@ CON
 
     WHO_AM_I                    = $75
     WHO_AM_I_RESP               = $71
+
+    XA_OFFS_H                   = $77                       ' ..$78 (LSB)
+    YA_OFFS_H                   = $79                       ' ..$7A (LSB)
+    ZA_OFFS_H                   = $7B                       ' ..$7C (LSB)
 
 ' Magnetometer registers
     WIA                         = $00

@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250 (P2 version)
     Copyright (c) 2020
     Started Jun 10, 2020
-    Updated Jun 10, 2020
+    Updated Jun 11, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -132,7 +132,8 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_z] := ~~tmpz
 
 PUB AccelDataReady()
-
+' Flag indicating new accelerometer data available
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return XLGDataReady()
 
 PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
@@ -224,15 +225,43 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_z] := ~~tmpz
 
 PUB GyroDataReady()
-
+' Flag indicating new gyroscope data available
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return XLGDataReady()
 
 PUB GyroDPS(gx, gy, gz) | tmpX, tmpY, tmpZ
-
+'Read gyroscope calibrated data (micro-degrees per second)
     GyroData(@tmpX, @tmpY, @tmpZ)
-    long[gx] := (tmpX * _gyro_cnts_per_lsb)' / 10
-    long[gy] := (tmpY * _gyro_cnts_per_lsb)' / 10
-    long[gz] := (tmpZ * _gyro_cnts_per_lsb)' / 10
+    long[gx] := (tmpX * _gyro_cnts_per_lsb)
+    long[gy] := (tmpY * _gyro_cnts_per_lsb)
+    long[gz] := (tmpZ * _gyro_cnts_per_lsb)
+
+PUB GyroOffset(ptr_x, ptr_y, ptr_z, rw=0) | tmpxyz[2]
+' Gyroscope data output offsets
+'   Valid values:
+'       When rw == nonzero (write)
+'           ptr_x, ptr_y, ptr_z: 0..65535
+'       When rw == 0 (read)
+'           ptr_x, ptr_y, ptr_z:
+'               Pointers to variables to hold current settings for respective axes
+    tmpxyz := 0
+    if rw == 0
+        readReg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
+        byte[ptr_x][0] := tmpxyz.byte[1]
+        byte[ptr_x][1] := tmpxyz.byte[0]
+        byte[ptr_y][0] := tmpxyz.byte[3]
+        byte[ptr_y][1] := tmpxyz.byte[2]
+        byte[ptr_z][0] := tmpxyz.byte[5]
+        byte[ptr_z][1] := tmpxyz.byte[4]
+    else
+        tmpxyz.byte[0] := ptr_x.byte[1]
+        tmpxyz.byte[1] := ptr_x.byte[0]
+        tmpxyz.byte[2] := ptr_y.byte[1]
+        tmpxyz.byte[3] := ptr_y.byte[0]
+        tmpxyz.byte[4] := ptr_z.byte[1]
+        tmpxyz.byte[5] := ptr_z.byte[0]
+
+        writeReg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
 
 PUB GyroScale(dps=-2) | tmp
 ' Set gyroscope full-scale range, in degrees per second
