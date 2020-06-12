@@ -14,21 +14,13 @@
 '#define MPU9250_SPI    NOT IMPLEMENTED YET
 CON
 
-    XTAL        = cfg#XTAL
-    XDIV        = cfg#XDIV
-    XMUL        = cfg#XMUL
-    XDIVP       = cfg#XDIVP
-    XOSC        = cfg#XOSC
-    XSEL        = cfg#XSEL
-    XPPPP       = cfg#XPPPP
-    CLOCKFREQ   = cfg#CLOCKFREQ
-    SETFREQ     = cfg#SETFREQ
-    ENAFREQ     = cfg#ENAFREQ
+     _xtlfreq   = cfg._xtlfreq
+     _clkfreq   = cfg._clkfreq_def
 
 ' -- User-modifiable constants
-    LED         = cfg#LED1
-    SER_RX      = cfg#SER_RX
-    SER_TX      = cfg#SER_TX
+    LED         = cfg.LED1
+    SER_RX      = cfg.SER_RX
+    SER_TX      = cfg.SER_TX
     SER_BAUD    = 2_000_000
 
     SCL_PIN     = 32                                        ' SPI, I2C
@@ -80,7 +72,7 @@ PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
     ser.printf("MagScale: %d\n", imu.MagScale())
 
     ser.printf("IntMask: ")
-    ser.bin(imu.IntMask(-2), 6)
+    ser.bin(imu.IntMask(-2), 8)
     ser.newline()
 
     repeat
@@ -96,7 +88,7 @@ PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
             "r", "R":                                       ' Change display mode: raw/calculated
                 ser.Position(0, 10)
                 repeat 2
-                    ser.ClearLine(ser#CLR_CUR_TO_END)
+                    ser.ClearLine(ser.CLR_CUR_TO_END)
                     ser.Newline()
                 dispmode ^= 1
 
@@ -113,7 +105,7 @@ PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
 
         ser.position (0, 15)
         ser.str(string("Interrupt: "))
-        ser.str(lookupz(imu.Interrupt() >> 6: string("No "), string("Yes")))
+        ser.bin(imu.Interrupt(), 8)
 
     ser.ShowCursor()
     FlashLED(LED, 100)
@@ -126,7 +118,7 @@ PUB AccelCalc | ax, ay, az
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
     ser.Str (int.DecPadded (az, 10))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline(ser.CLR_CUR_TO_END)
     ser.Newline()
 
 PUB AccelRaw | ax, ay, az
@@ -137,7 +129,7 @@ PUB AccelRaw | ax, ay, az
     ser.Str (int.DecPadded (ax, 7))
     ser.Str (int.DecPadded (ay, 7))
     ser.Str (int.DecPadded (az, 7))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline(ser.CLR_CUR_TO_END)
     ser.Newline()
 
 PUB GyroCalc | gx, gy, gz
@@ -148,7 +140,7 @@ PUB GyroCalc | gx, gy, gz
     ser.Str (int.DecPadded (gx, 11))
     ser.Str (int.DecPadded (gy, 11))
     ser.Str (int.DecPadded (gz, 11))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
 PUB GyroRaw | gx, gy, gz
@@ -159,7 +151,7 @@ PUB GyroRaw | gx, gy, gz
     ser.Str (int.DecPadded (gx, 7))
     ser.Str (int.DecPadded (gy, 7))
     ser.Str (int.DecPadded (gz, 7))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
 PUB MagCalc | mx, my, mz
@@ -170,7 +162,7 @@ PUB MagCalc | mx, my, mz
     ser.Str (int.DecPadded (mx, 10))
     ser.Str (int.DecPadded (my, 10))
     ser.Str (int.DecPadded (mz, 10))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
 PUB MagRaw | mx, my, mz
@@ -181,7 +173,7 @@ PUB MagRaw | mx, my, mz
     ser.Str (int.DecPadded (mx, 7))
     ser.Str (int.DecPadded (my, 7))
     ser.Str (int.DecPadded (mz, 7))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
 PUB Calibrate()
@@ -197,12 +189,12 @@ PUB Setup()
     repeat until ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
     time.MSleep(30)
     ser.Clear()
-    ser.Str(string("Serial terminal started", ser#CR, ser#LF))
+    ser.Str(string("Serial terminal started", ser.CR, ser.LF))
     if imu.Start(SCL_PIN, SDA_PIN, I2C_HZ)
         imu.Defaults()
-        ser.str(string("MPU9250 driver started (I2C)", ser#CR, ser#LF))
+        ser.str(string("MPU9250 driver started (I2C)", ser.CR, ser.LF))
     else
-        ser.str(string("MPU9250 driver failed to start - halting", ser#CR, ser#LF))
+        ser.str(string("MPU9250 driver failed to start - halting", ser.CR, ser.LF))
         imu.Stop()
         time.MSleep(5)
         FlashLED(LED, 500)
