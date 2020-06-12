@@ -180,7 +180,7 @@ PUB AccelOffset(ptr_x, ptr_y, ptr_z, rw=0) | tmp
         tmp <<= 1
         writeReg(SLAVE_XLG, core.ZA_OFFS_H, 2, @tmp)
 
-PUB AccelScale(g=-2) | tmp
+PUB AccelScale(g=-2): result | tmp
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
@@ -199,7 +199,7 @@ PUB AccelScale(g=-2) | tmp
     tmp := (tmp | g) & core.ACCEL_CFG_MASK
     writeReg(SLAVE_XLG, core.ACCEL_CFG, 1, @tmp)
 
-PUB DeviceID(sub_device)
+PUB DeviceID(sub_device): result
 ' Read device ID from sub_device
 '   Valid values:
 '       SLAVE_XLG($68): Return device ID from accelerometer/gyro
@@ -211,9 +211,9 @@ PUB DeviceID(sub_device)
         SLAVE_XLG:
             readReg (SLAVE_XLG, core.WHO_AM_I, 1, @result)
         OTHER:
-            return FALSE
+            result := FALSE
 
-PUB FSYNCActiveState(state=-2) | tmp
+PUB FSYNCActiveState(state=-2): result | tmp
 ' Set FSYNC pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
@@ -230,7 +230,7 @@ PUB FSYNCActiveState(state=-2) | tmp
     tmp := (tmp | state) & core.INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core.INT_BYPASS_CFG, 1, @tmp)
 
-PUB GyroAxisEnabled(xyz_mask=-2) | tmp, bits
+PUB GyroAxisEnabled(xyz_mask=-2): result | tmp, bits
 ' Enable data output for Gyroscope - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
@@ -241,7 +241,8 @@ PUB GyroAxisEnabled(xyz_mask=-2) | tmp, bits
         %000..%111:
             xyz_mask := ((xyz_mask ^ core.DISABLE_INVERT) & core.BITS_DISABLE_XYZG) << core.FLD_DISABLE_XYZG
         OTHER:
-            return ((tmp >> core.FLD_DISABLE_XYZG) & core.BITS_DISABLE_XYZG) ^ core.DISABLE_INVERT
+            result := ((tmp >> core.FLD_DISABLE_XYZG) & core.BITS_DISABLE_XYZG) ^ core.DISABLE_INVERT
+            return
 
     tmp &= core.MASK_DISABLE_XYZG
     tmp := (tmp | xyz_mask) & core.PWR_MGMT_2_MASK
@@ -260,10 +261,10 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
-PUB GyroDataReady()
+PUB GyroDataReady(): result
 ' Flag indicating new gyroscope data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    return XLGDataReady()
+    result := XLGDataReady()
 
 PUB GyroDPS(gx, gy, gz) | tmpX, tmpY, tmpZ
 'Read gyroscope calibrated data (micro-degrees per second)
@@ -292,7 +293,7 @@ PUB GyroOffset(ptr_x, ptr_y, ptr_z, rw=0) | tmpxyz[2]
         tmpxyz.word[2] := ptr_z
         writeReg(SLAVE_XLG, core.XG_OFFS_USR, 6, @tmpxyz)
 
-PUB GyroScale(dps=-2) | tmp
+PUB GyroScale(dps=-2): result | tmp
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
 '   Any other value polls the chip and returns the current setting
@@ -311,7 +312,7 @@ PUB GyroScale(dps=-2) | tmp
     tmp := (tmp | dps) & core.GYRO_CFG_MASK
     writeReg(SLAVE_XLG, core.GYRO_CFG, 1, @tmp)
 
-PUB IntActiveState(state=-2) | tmp
+PUB IntActiveState(state=-2): result | tmp
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
@@ -328,7 +329,7 @@ PUB IntActiveState(state=-2) | tmp
     tmp := (tmp | state) & core.INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core.INT_BYPASS_CFG, 1, @tmp)
 
-PUB IntClearedBy(method=-2) | tmp
+PUB IntClearedBy(method=-2): result | tmp
 ' Select method by which interrupt status may be cleared
 '   Valid values:
 '      *READ_INT_FLAG (0): Only by reading interrupt flags
@@ -347,7 +348,7 @@ PUB IntClearedBy(method=-2) | tmp
     tmp := (tmp | method) & core.INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core.INT_BYPASS_CFG, 1, @tmp)
 
-PUB Interrupt()
+PUB Interrupt(): result
 ' Indicates one or more interrupts have been asserted
 '   Returns: non-zero result if any interrupts have been asserted:
 '       INT_WAKE_ON_MOTION (64) - Wake on motion interrupt occurred
@@ -357,7 +358,7 @@ PUB Interrupt()
     result := $00
     readReg(SLAVE_XLG, core.INT_STATUS, 1, @result)
 
-PUB IntLatchEnabled(enable=-2) | tmp
+PUB IntLatchEnabled(enable=-2): result | tmp
 ' Latch interrupt pin when interrupt asserted
 '   Valid values:
 '      *FALSE (0): Interrupt pin is pulsed (width = 50uS)
@@ -376,7 +377,7 @@ PUB IntLatchEnabled(enable=-2) | tmp
     tmp := (tmp | enable) & core.INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core.INT_BYPASS_CFG, 1, @tmp)
 
-PUB IntMask(mask=-2) | tmp
+PUB IntMask(mask=-2): result | tmp
 ' Allow interrupts to assert INT pin, set by mask, or by ORing together symbols shown below
 '   Valid values:
 '       Bits: %x6x43xx0 (bit positions marked 'x' aren't supported by the device; setting any of them to '1' will be considered invalid and will query the current setting, instead)
@@ -397,7 +398,7 @@ PUB IntMask(mask=-2) | tmp
     tmp := mask & core.INT_ENABLE_MASK
     writeReg(SLAVE_XLG, core.INT_ENABLE, 1, @tmp)
 
-PUB IntOutputType(pp_od=-2) | tmp
+PUB IntOutputType(pp_od=-2): result | tmp
 ' Set interrupt pin output type
 '   Valid values:
 '      *INT_PP (0): Push-pull
@@ -416,7 +417,7 @@ PUB IntOutputType(pp_od=-2) | tmp
     tmp := (tmp | pp_od) & core.INT_BYPASS_CFG_MASK
     writeReg(SLAVE_XLG, core.INT_BYPASS_CFG, 1, @tmp)
 
-PUB MagADCRes(bits=-2) | tmp
+PUB MagADCRes(bits=-2): result | tmp
 ' Set magnetometer ADC resolution, in bits
 '   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
@@ -449,14 +450,14 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
-PUB MagDataOverrun()
+PUB MagDataOverrun(): result
 ' Indicates magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
     result := $00
     readReg(SLAVE_MAG, core.ST1, 1, @result)
     result := ((result >> core.FLD_DOR) & %1) * TRUE
 
-PUB MagDataRate(Hz=-2)
+PUB MagDataRate(Hz=-2): result
 ' Set magnetometer output data rate, in Hz
 '   Valid values: 8, 100
 '   Any other value polls the chip and returns the current setting
@@ -469,11 +470,11 @@ PUB MagDataRate(Hz=-2)
         OTHER:
             case MagOpMode(-2)
                 CONT8:
-                    return 8
+                    result := 8
                 CONT100:
-                    return 100
+                    result := 100
 
-PUB MagDataReady()
+PUB MagDataReady(): result
 ' Indicates new magnetometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     result := 0
@@ -495,7 +496,7 @@ PUB MagTesla(mx, my, mz) | tmpX, tmpY, tmpZ
     long[my] := (((tmpY * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
     long[mz] := (((tmpZ * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
 
-PUB MagOverflow()
+PUB MagOverflow(): result
 ' Indicates magnetometer measurement has overflowed
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
 '   NOTE: If this flag is TRUE, measurement data should not be trusted
@@ -504,7 +505,7 @@ PUB MagOverflow()
     readReg(SLAVE_MAG, core.ST2, 1, @result)
     result := ((result >> core.FLD_HOFL) & %1) * TRUE
 
-PUB MagScale(scale=-2) ' XXX PRELIMINARY
+PUB MagScale(scale=-2): result ' XXX PRELIMINARY
 ' Set full-scale range of magnetometer, in bits
 '   Valid values: 14, 16
     case scale
@@ -513,11 +514,12 @@ PUB MagScale(scale=-2) ' XXX PRELIMINARY
         16:
             _mag_cnts_per_lsb := 1_499
         OTHER:
-            return MagADCRes()
+            result := MagADCRes()
+            return
 
     MagADCRes(scale)
 
-PUB MagSelfTestEnabled(enable=-2) | tmp
+PUB MagSelfTestEnabled(enable=-2): result | tmp
 ' Enable magnetometer self-test mode (generates magnetic field)
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -544,7 +546,7 @@ PUB MeasureMag()
 ' Perform magnetometer measurement
     MagOpMode(SINGLE)
 
-PUB MagOpMode(mode=-2) | tmp
+PUB MagOpMode(mode=-2): result | tmp
 ' Set magnetometer operating mode
 '   Valid values:
 '      *POWERDOWN (0): Power down
@@ -576,7 +578,7 @@ PUB Reset()
     XLGSoftReset()
     MagSoftReset()
 
-PUB Temperature()
+PUB Temperature(): result
 ' Read temperature, in hundredths of a degree
     result := $00
     readReg(SLAVE_XLG, core.TEMP_OUT_H, 2, @result)
@@ -603,7 +605,7 @@ PUB TempScale(scale=-2)
         OTHER:
             return _temp_scale
 
-PUB XLGDataReady()
+PUB XLGDataReady(): result
 ' Indicates new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     readReg(SLAVE_XLG, core.INT_STATUS, 1, @result)
@@ -622,7 +624,7 @@ PRI disableI2CMaster() | tmp
     tmp := (tmp | 1 << core.FLD_BYPASS_EN)
     writeReg(SLAVE_XLG, core.INT_BYPASS_CFG, 1, @tmp)
 
-PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
+PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg_nr
         $00..$75:
@@ -650,7 +652,7 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
         OTHER:
             return
 
-PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
+PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
 '' Write num_bytes to the slave device from the address stored in buff_addr
     case reg_nr
         $00..$75:
