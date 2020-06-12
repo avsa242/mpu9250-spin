@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 11, 2020
+    Updated Jun 12, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -137,8 +137,8 @@ CON
     WHO_AM_I_RESP               = $71
 
     XA_OFFS_H                   = $77                       ' ..$78 (LSB)
-    YA_OFFS_H                   = $79                       ' ..$7A (LSB)
-    ZA_OFFS_H                   = $7B                       ' ..$7C (LSB)
+    YA_OFFS_H                   = $7A                       ' ..$7B (LSB)
+    ZA_OFFS_H                   = $7D                       ' ..$7E (LSB)
 
 ' Magnetometer registers
     WIA                         = $00

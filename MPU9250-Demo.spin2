@@ -5,7 +5,7 @@
     Description: Demo of the MPU9250 driver
     Copyright (c) 2020
     Started Jun 10, 2020
-    Updated Jun 11, 2020
+    Updated Jun 12, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -49,7 +49,7 @@ VAR
 
     long _overruns
 
-PUB Main() | dispmode, gxo, gyo, gzo
+PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
 
     Setup()
     imu.AccelScale(2)                                       ' 2, 4, 8, 16 (g's)
@@ -66,14 +66,19 @@ PUB Main() | dispmode, gxo, gyo, gzo
     dispmode := 0
 
     gxo := gyo := gzo := 0
+    axo := ayo := azo := 0
     ser.position(0, 3)                                      ' Read back the settings from above
     ser.printf("AccelScale: %d\n", imu.AccelScale())
+
+    imu.AccelOffset(@axo, @ayo, @azo)                       ' MPU9250 Accel has some factory trim accel offsets
+    ser.printf("AccelOffset: %d(x), %d(y), %d(z)\n", axo, ayo, azo)
 
     ser.printf("GyroScale: %d\n", imu.GyroScale())
     imu.GyroOffset(@gxo, @gyo, @gzo)
     ser.printf("GyroOffset: %d(x), %d(y), %d(z)\n", gxo, gyo, gzo)
 
     ser.printf("MagScale: %d\n", imu.MagScale())
+
     ser.printf("IntMask: ")
     ser.bin(imu.IntMask(-2), 6)
     ser.newline()

@@ -42,5 +42,5 @@ P2/SPIN2:
 - [x] Implement methods to retrieve sensor registers
 - [x] Port to P2/SPIN2
 - [ ] Add support for sensor calibration offsets - WIP
-- [ ] Implement scaled sensor data methods
+- [x] Implement scaled sensor data methods
 - [ ] SPI driver variant
