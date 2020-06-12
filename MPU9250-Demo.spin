@@ -5,7 +5,7 @@
     Description: Demo of the MPU9250 driver
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 9, 2020
+    Updated Jun 12, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -41,17 +41,16 @@ VAR
 
     long _overruns
 
-PUB Main | dispmode
+PUB Main | dispmode, axo, ayo, azo, gxo, gyo, gzo
 
     Setup
 
-'    imu.AccelADCRes(10)                                     ' 8, 10, 12 (low-power, normal, high-res, resp.)
     imu.AccelScale(2)                                       ' 2, 4, 8, 16 (g's)
-'    imu.AccelDataRate(100)                                  ' 0, 1, 10, 25, 50, 100, 200, 400, 1344, 1600
     imu.AccelAxisEnabled(%111)                              ' 0 or 1 for each bit (%xyz)
 
     imu.GyroScale(500)                                      ' 250, 500, 1000, 2000
     imu.GyroAxisEnabled(%111)                               ' 0 or 1 for each bit (%xyz)
+    imu.GyroOffset(0, 0, 0, 1)                              ' x, y, z: 0..65535, rw = 1 (write)
 
     imu.MagScale(16)                                        ' 14, 16 (bits)
 
@@ -59,31 +58,32 @@ PUB Main | dispmode
     ser.HideCursor
     dispmode := 0
 
+    gxo := gyo := gzo := 0
+    axo := ayo := azo := 0
     ser.position(0, 3)                                      ' Read back the settings from above
     ser.str(string("AccelScale: "))                         '
     ser.dec(imu.AccelScale(-2))                             '
     ser.newline                                             '
-'    ser.str(string("AccelADCRes: "))                        '
-'    ser.dec(imu.AccelADCRes(-2))                            '
-'    ser.newline                                             '
-'    ser.str(string("AccelDataRate: "))                      '
-'    ser.dec(imu.AccelDataRate(-2))                          '
-'    ser.newline                                             '
-    ser.str(string("GyroScale: "))                         '
-    ser.dec(imu.GyroScale(-2))                             '
-    ser.newline                                             '
-    ser.str(string("MagScale: "))                         '
-    ser.dec(imu.MagScale(-2))                             '
-    ser.newline                                             '
-'    ser.str(string("FIFOMode: "))                           '
-'    ser.dec(imu.FIFOMode(-2))                               '
-'    ser.newline                                             '
-'    ser.str(string("IntThresh: "))                          '
-'    ser.dec(imu.IntThresh(-2))                              '
-'    ser.newline                                             '
-    ser.str(string("IntMask: "))                            '
-    ser.bin(imu.IntMask(-2), 6)                             '
-    ser.newline                                             '
+
+    ser.str(string("GyroScale: "))
+    ser.dec(imu.GyroScale(-2))
+    ser.newline
+
+    imu.GyroOffset(@gxo, @gyo, @gzo, 0)
+    ser.str(string("GyroOffset: "))
+    ser.dec(gxo)
+    ser.str(string("(x), "))
+    ser.dec(gyo)
+    ser.str(string("(y), "))
+    ser.dec(gzo)
+    ser.str(string("(z)"))
+
+    ser.str(string("MagScale: "))
+    ser.dec(imu.MagScale(-2))
+    ser.newline
+    ser.str(string("IntMask: "))
+    ser.bin(imu.IntMask(-2), 8)
+    ser.newline
 
     repeat
         case ser.RxCheck
@@ -116,7 +116,7 @@ PUB Main | dispmode
 
         ser.position (0, 15)
         ser.str(string("Interrupt: "))
-        ser.str(lookupz(imu.Interrupt >> 6: string("No "), string("Yes")))
+        ser.bin(imu.Interrupt, 8)
 
     ser.ShowCursor
     FlashLED(LED, 100)
@@ -125,32 +125,23 @@ PUB AccelCalc | ax, ay, az
 
     repeat until imu.AccelDataReady
     imu.AccelG (@ax, @ay, @az)
-'    if imu.AccelDataOverrun
-'        _overruns++
     ser.Str (string("Accel micro-g: "))
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
     ser.Str (int.DecPadded (az, 10))
     ser.clearline(ser#CLR_CUR_TO_END)
     ser.Newline
-'    ser.Str (string("Overruns: "))
-'    ser.Dec (_overruns)
 
 PUB AccelRaw | ax, ay, az
 
     repeat until imu.AccelDataReady
     imu.AccelData (@ax, @ay, @az)
-'    if imu.AccelDataOverrun
-'        _overruns++
     ser.Str (string("Accel raw: "))
     ser.Str (int.DecPadded (ax, 7))
     ser.Str (int.DecPadded (ay, 7))
     ser.Str (int.DecPadded (az, 7))
     ser.clearline(ser#CLR_CUR_TO_END)
     ser.Newline
-'    ser.Str (string("Overruns: "))
-'    ser.Dec (_overruns)
-'    ser.newline
 
 PUB GyroCalc | gx, gy, gz
 
@@ -197,7 +188,7 @@ PUB MagRaw | mx, my, mz
     ser.newline
 
 PUB Calibrate
-
+' XXX not yet implemented
     ser.Position (0, 14)
     ser.Str(string("Calibrating..."))
 '    imu.Calibrate

@@ -670,7 +670,7 @@ PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
             i2c.start()
             repeat tmp from 0 to 1
                 i2c.write(cmd_packet.byte[tmp])
-            repeat tmp from nr_bytes to 0
+            repeat tmp from nr_bytes-1 to 0
                 i2c.write (byte[buff_addr][tmp])
             i2c.stop()
         OTHER:

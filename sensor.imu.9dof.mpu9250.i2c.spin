@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 9, 2020
+    Updated Jun 12, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -137,7 +137,8 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_z] := ~~tmpz
 
 PUB AccelDataReady
-
+' Flag indicating new accelerometer data available
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return XLGDataReady
 
 PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
@@ -147,6 +148,43 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_x] := (tmpx * _accel_cnts_per_lsb)
     long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
     long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
+
+PUB AccelOffset(ptr_x, ptr_y, ptr_z, rw) | tmp
+' Accelerometer data output offsets
+'   Valid values:
+'       When rw == nonzero (write)
+'           ptr_x, ptr_y, ptr_z: 0..32767
+'       When rw == 0 (read)
+'           ptr_x, ptr_y, ptr_z:
+'               Pointers to variables to hold current settings for respective axes
+    if rw == 0                                              ' Read current settings
+        tmp := 0
+        readReg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
+        word[ptr_x] := tmp
+
+        tmp := 0
+        readReg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
+        word[ptr_y] := tmp
+
+        tmp := 0
+        readReg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
+        word[ptr_z] := tmp
+    else                                                    ' Write new settings
+        tmp := 0
+        tmp := ptr_x
+        tmp <<= 1
+        writeReg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
+
+        tmp := 0
+        tmp := ptr_y
+        tmp <<=1
+        writeReg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
+
+        tmp := 0
+        tmp := ptr_z
+        tmp <<= 1
+        writeReg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
+
 
 PUB AccelScale(g) | tmp
 ' Set accelerometer full-scale range, in g's
@@ -229,15 +267,36 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_z] := ~~tmpz
 
 PUB GyroDataReady
-
+' Flag indicating new gyroscope data available
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return XLGDataReady
 
 PUB GyroDPS(gx, gy, gz) | tmpX, tmpY, tmpZ
-
+'Read gyroscope calibrated data (micro-degrees per second)
     GyroData(@tmpX, @tmpY, @tmpZ)
-    long[gx] := (tmpX * _gyro_cnts_per_lsb)' / 10
-    long[gy] := (tmpY * _gyro_cnts_per_lsb)' / 10
-    long[gz] := (tmpZ * _gyro_cnts_per_lsb)' / 10
+    long[gx] := (tmpX * _gyro_cnts_per_lsb)
+    long[gy] := (tmpY * _gyro_cnts_per_lsb)
+    long[gz] := (tmpZ * _gyro_cnts_per_lsb)
+
+PUB GyroOffset(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
+' Gyroscope data output offsets
+'   Valid values:
+'       When rw == nonzero (write)
+'           ptr_x, ptr_y, ptr_z: 0..65535
+'       When rw == 0 (read)
+'           ptr_x, ptr_y, ptr_z:
+'               Pointers to variables to hold current settings for respective axes
+    tmpxyz := 0
+    if rw == 0
+        readReg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
+        long[ptr_x] := tmpxyz.word[0]
+        long[ptr_y] := tmpxyz.word[1]
+        long[ptr_z] := tmpxyz.word[2]
+    else
+        tmpxyz.word[0] := ptr_x
+        tmpxyz.word[1] := ptr_y
+        tmpxyz.word[2] := ptr_z
+        writeReg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
 
 PUB GyroScale(dps) | tmp
 ' Set gyroscope full-scale range, in degrees per second
@@ -460,6 +519,7 @@ PUB MagScale(scale) ' XXX PRELIMINARY
         16:
             _mag_cnts_per_lsb := 1_499
         OTHER:
+            result := MagADCRes(-2)
             return
 
     MagADCRes(scale)
@@ -569,30 +629,48 @@ PRI disableI2CMaster | tmp
     tmp := (tmp | 1 << core#FLD_BYPASS_EN)
     writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
-PRI readReg(slave_id, reg, nr_bytes, buff_addr) | cmd_packet, tmp
+PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
-    case reg                                                    'Basic register validation
-        $00..$FF:                                               ' Consult your device's datasheet!
+    case reg_nr                                             ' Basic register validation
+        $00..$75:
             cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg
+            cmd_packet.byte[1] := reg_nr
             i2c.start
             i2c.wr_block (@cmd_packet, 2)
             i2c.start
             i2c.write (slave_id|1)
             i2c.rd_block (buff_addr, nr_bytes, TRUE)
             i2c.stop
+        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H:
+            cmd_packet.byte[0] := slave_id
+            cmd_packet.byte[1] := reg_nr
+            i2c.start
+            i2c.wr_block (@cmd_packet, 2)
+            i2c.start
+            i2c.write (slave_id|1)
+            repeat tmp from nr_bytes-1 to 0
+                byte[buff_addr][tmp] := i2c.read(tmp == 0)
+            i2c.stop
         OTHER:
             return
 
-PRI writeReg(slave_id, reg, nr_bytes, buff_addr) | cmd_packet, tmp
+PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Write num_bytes to the slave device from the address stored in buff_addr
-    case reg                                                    'Basic register validation
-        $00..$FF:                                               ' Consult your device's datasheet!
+    case reg_nr                                             ' Basic register validation
+        $00..$75:
             cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg
+            cmd_packet.byte[1] := reg_nr
             i2c.start
             i2c.wr_block (@cmd_packet, 2)
             repeat tmp from 0 to nr_bytes-1
+                i2c.write (byte[buff_addr][tmp])
+            i2c.stop
+        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H:
+            cmd_packet.byte[0] := slave_id
+            cmd_packet.byte[1] := reg_nr
+            i2c.start
+            i2c.wr_block(@cmd_packet, 2)
+            repeat tmp from nr_bytes-1 to 0
                 i2c.write (byte[buff_addr][tmp])
             i2c.stop
         OTHER:
