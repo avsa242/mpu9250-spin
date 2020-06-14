@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 12, 2020
+    Updated Jun 14, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -149,8 +149,8 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
     long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
 
-PUB AccelOffset(ptr_x, ptr_y, ptr_z, rw) | tmp
-' Accelerometer data output offsets
+PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp
+' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == nonzero (write)
 '           ptr_x, ptr_y, ptr_z: 0..32767
@@ -278,8 +278,8 @@ PUB GyroDPS(gx, gy, gz) | tmpX, tmpY, tmpZ
     long[gy] := (tmpY * _gyro_cnts_per_lsb)
     long[gz] := (tmpZ * _gyro_cnts_per_lsb)
 
-PUB GyroOffset(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
-' Gyroscope data output offsets
+PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
+' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
 '       When rw == nonzero (write)
 '           ptr_x, ptr_y, ptr_z: 0..65535

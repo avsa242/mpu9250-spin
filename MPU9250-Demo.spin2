@@ -5,7 +5,7 @@
     Description: Demo of the MPU9250 driver
     Copyright (c) 2020
     Started Jun 10, 2020
-    Updated Jun 12, 2020
+    Updated Jun 14, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -49,7 +49,7 @@ PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
 
     imu.GyroScale(500)                                      ' 250, 500, 1000, 2000
     imu.GyroAxisEnabled(%111)                               ' 0 or 1 for each bit (%xyz)
-    imu.GyroOffset(0, 0, 0, 1)                              ' x, y, z: 0..65535, rw = 1 (write)
+    imu.GyroBias(0, 0, 0, 1)                              ' x, y, z: 0..65535, rw = 1 (write)
 
     imu.MagScale(16)                                        ' 14, 16 (bits)
 
@@ -62,12 +62,12 @@ PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
     ser.position(0, 3)                                      ' Read back the settings from above
     ser.printf("AccelScale: %d\n", imu.AccelScale())
 
-    imu.AccelOffset(@axo, @ayo, @azo)                       ' MPU9250 Accel has some factory trim accel offsets
-    ser.printf("AccelOffset: %d(x), %d(y), %d(z)\n", axo, ayo, azo)
+    imu.AccelBias(@axo, @ayo, @azo)                       ' MPU9250 Accel has some factory trim accel offsets
+    ser.printf("AccelBias: %d(x), %d(y), %d(z)\n", axo, ayo, azo)
 
     ser.printf("GyroScale: %d\n", imu.GyroScale())
-    imu.GyroOffset(@gxo, @gyo, @gzo)
-    ser.printf("GyroOffset: %d(x), %d(y), %d(z)\n", gxo, gyo, gzo)
+    imu.GyroBias(@gxo, @gyo, @gzo)
+    ser.printf("GyroBias: %d(x), %d(y), %d(z)\n", gxo, gyo, gzo)
 
     ser.printf("MagScale: %d\n", imu.MagScale())
 
@@ -110,7 +110,7 @@ PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
     ser.ShowCursor()
     FlashLED(LED, 100)
 
-PUB AccelCalc | ax, ay, az
+PUB AccelCalc() | ax, ay, az
 
     repeat until imu.AccelDataReady()
     imu.AccelG (@ax, @ay, @az)
@@ -121,7 +121,7 @@ PUB AccelCalc | ax, ay, az
     ser.clearline(ser.CLR_CUR_TO_END)
     ser.Newline()
 
-PUB AccelRaw | ax, ay, az
+PUB AccelRaw() | ax, ay, az
 
     repeat until imu.AccelDataReady()
     imu.AccelData (@ax, @ay, @az)
@@ -132,7 +132,7 @@ PUB AccelRaw | ax, ay, az
     ser.clearline(ser.CLR_CUR_TO_END)
     ser.Newline()
 
-PUB GyroCalc | gx, gy, gz
+PUB GyroCalc() | gx, gy, gz
 
     repeat until imu.GyroDataReady()
     imu.GyroDPS (@gx, @gy, @gz)
@@ -143,7 +143,7 @@ PUB GyroCalc | gx, gy, gz
     ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
-PUB GyroRaw | gx, gy, gz
+PUB GyroRaw() | gx, gy, gz
 
     repeat until imu.GyroDataReady()
     imu.GyroData (@gx, @gy, @gz)
@@ -154,7 +154,7 @@ PUB GyroRaw | gx, gy, gz
     ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
-PUB MagCalc | mx, my, mz
+PUB MagCalc() | mx, my, mz
 
     repeat until imu.MagDataReady()
     imu.MagTesla (@mx, @my, @mz)
@@ -165,7 +165,7 @@ PUB MagCalc | mx, my, mz
     ser.clearline(ser.CLR_CUR_TO_END)
     ser.newline()
 
-PUB MagRaw | mx, my, mz
+PUB MagRaw() | mx, my, mz
 
     repeat until imu.MagDataReady()
     imu.MagData (@mx, @my, @mz)

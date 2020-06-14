@@ -5,7 +5,7 @@
     Description: Demo of the MPU9250 driver
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 12, 2020
+    Updated Jun 14, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -50,7 +50,7 @@ PUB Main | dispmode, axo, ayo, azo, gxo, gyo, gzo
 
     imu.GyroScale(500)                                      ' 250, 500, 1000, 2000
     imu.GyroAxisEnabled(%111)                               ' 0 or 1 for each bit (%xyz)
-    imu.GyroOffset(0, 0, 0, 1)                              ' x, y, z: 0..65535, rw = 1 (write)
+    imu.GyroBias(0, 0, 0, 1)                              ' x, y, z: 0..65535, rw = 1 (write)
 
     imu.MagScale(16)                                        ' 14, 16 (bits)
 
@@ -69,8 +69,8 @@ PUB Main | dispmode, axo, ayo, azo, gxo, gyo, gzo
     ser.dec(imu.GyroScale(-2))
     ser.newline
 
-    imu.GyroOffset(@gxo, @gyo, @gzo, 0)
-    ser.str(string("GyroOffset: "))
+    imu.GyroBias(@gxo, @gyo, @gzo, 0)
+    ser.str(string("GyroBias: "))
     ser.dec(gxo)
     ser.str(string("(x), "))
     ser.dec(gyo)
