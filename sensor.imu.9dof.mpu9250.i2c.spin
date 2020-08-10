@@ -244,17 +244,17 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
-PUB GyroDataReady
+PUB GyroDataReady{}: flag
 ' Flag indicating new gyroscope data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    return XLGDataReady
+    return xlgdataready{}
 
-PUB GyroDPS(gx, gy, gz) | tmpX, tmpY, tmpZ
+PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
 'Read gyroscope calibrated data (micro-degrees per second)
-    GyroData(@tmpX, @tmpY, @tmpZ)
-    long[gx] := (tmpX * _gyro_cnts_per_lsb)
-    long[gy] := (tmpY * _gyro_cnts_per_lsb)
-    long[gz] := (tmpZ * _gyro_cnts_per_lsb)
+    GyroData(@tmpx, @tmpy, @tmpz)
+    long[gx] := (tmpx * _gyro_cnts_per_lsb)
+    long[gy] := (tmpy * _gyro_cnts_per_lsb)
+    long[gz] := (tmpz * _gyro_cnts_per_lsb)
 
 PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
 ' Read or write/manually set gyroscope calibration offset values
@@ -266,7 +266,7 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
 '               Pointers to variables to hold current settings for respective axes
     tmpxyz := 0
     if rw == 0
-        readReg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
+        readreg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
         long[ptr_x] := tmpxyz.word[0]
         long[ptr_y] := tmpxyz.word[1]
         long[ptr_z] := tmpxyz.word[2]
@@ -274,26 +274,24 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
         tmpxyz.word[0] := ptr_x
         tmpxyz.word[1] := ptr_y
         tmpxyz.word[2] := ptr_z
-        writeReg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
+        writereg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
 
-PUB GyroScale(dps) | tmp
+PUB GyroScale(dps): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_XLG, core#GYRO_CFG, 1, @tmp)
+    curr_scl := 0
+    readreg(SLAVE_XLG, core#GYRO_CFG, 1, @curr_scl)
     case dps
         250, 500, 1000, 2000:
             dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
             _gyro_cnts_per_lsb := lookupz(dps >> core#FLD_GYRO_FS_SEL: 7629, 15_258, 30_517, 61_035)  ' XXX unverified
         OTHER:
-            tmp := (tmp >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
-            result := lookupz(tmp: 250, 500, 1000, 2000)
-            return
+            curr_scl := (curr_scl >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
+            return lookupz(curr_scl: 250, 500, 1000, 2000)
 
-    tmp &= core#MASK_GYRO_FS_SEL
-    tmp := (tmp | dps) & core#GYRO_CFG_MASK
-    writeReg(SLAVE_XLG, core#GYRO_CFG, 1, @tmp)
+    dps := ((curr_scl & core#MASK_GYRO_FS_SEL) | dps) & core#GYRO_CFG_MASK
+    writereg(SLAVE_XLG, core#GYRO_CFG, 1, @dps)
 
 PUB IntActiveState(state) | tmp
 ' Set interrupt pin active state/logic level
