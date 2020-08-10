@@ -371,24 +371,22 @@ PUB IntMask(mask): curr_mask
             readreg(SLAVE_XLG, core#INT_ENABLE, 1, @curr_mask)
             return curr_mask & core#INT_ENABLE_MASK
 
-PUB IntOutputType(pp_od) | tmp
+PUB IntOutputType(pp_od): curr_setting
 ' Set interrupt pin output type
 '   Valid values:
 '      *INT_PP (0): Push-pull
 '       INT_OD (1): Open-drain
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    curr_setting := 0
+    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_setting)
     case pp_od
         INT_PP, INT_OD:
             pp_od := pp_od << core#FLD_OPEN
         OTHER:
-            result := (tmp >> core#FLD_OPEN) & %1
-            return
+            return (curr_setting >> core#FLD_OPEN) & %1
 
-    tmp &= core#MASK_OPEN
-    tmp := (tmp | pp_od) & core#INT_BYPASS_CFG_MASK
-    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    pp_od := ((curr_setting & core#MASK_OPEN) | pp_od) & core#INT_BYPASS_CFG_MASK
+    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @pp_od)
 
 PUB MagADCRes(bits) | tmp
 ' Set magnetometer ADC resolution, in bits
