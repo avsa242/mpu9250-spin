@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250 (P2 version)
     Copyright (c) 2020
     Started Jun 10, 2020
-    Updated Jun 12, 2020
+    Updated Jul 18, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -28,6 +28,18 @@ CON
     X_AXIS              = 0
     Y_AXIS              = 1
     Z_AXIS              = 2
+
+' Indicate to user apps how many Degrees of Freedom each sub-sensor has
+'   (also imply whether or not it has a particular sensor)
+    ACCEL_DOF           = 3
+    GYRO_DOF            = 3
+    MAG_DOF             = 3
+    BARO_DOF            = 0
+    DOF                 = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
+
+' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
+    R                   = 0
+    W                   = 1
 
 ' Magnetometer operating modes
     POWERDOWN           = %0000
@@ -78,13 +90,13 @@ PUB Null()
 PUB Start(SCL_PIN, SDA_PIN, I2C_HZ): okay
 
     if lookdown(SCL_PIN: 0..63) and lookdown(SDA_PIN: 0..63)
-        if I2C_HZ =< core.I2C_MAX_FREQ
+        if I2C_HZ <= core.I2C_MAX_FREQ
             if okay := i2c.setup (SCL_PIN, SDA_PIN, I2C_HZ)     'I2C Object Started?
-                time.USleep (core.TREGRW)
+                waitus (core.TREGRW)
                 if i2c.present (SLAVE_XLG)                      'Response from device?
-'                    if DeviceID(SLAVE_XLG) == core.WHO_AM_I_RESP'Is it really an MPU9250?  'XXX fails validation
+                    disableI2CMaster()
+                    if DeviceID(SLAVE_XLG) == core.WHO_AM_I_RESP
                         Reset()
-                        disableI2CMaster()                      ' Bypass the internal I2C master so we can read the Mag from the same bus
                         ReadMagAdj()
                         return okay
 
@@ -131,7 +143,7 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
-PUB AccelDataReady()
+PUB AccelDataReady(): flag
 ' Flag indicating new accelerometer data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return XLGDataReady()
@@ -593,7 +605,7 @@ PUB Temperature(): result
             result := (( (result * 1_0000) - 7_00) / 333_87) + 21_00
             return
 
-PUB TempScale(scale=-2)
+PUB TempScale(scale=-2): result
 ' Set temperature scale used by Temperature method
 '   Valid values:
 '       C (0): Celsius
@@ -627,7 +639,7 @@ PRI disableI2CMaster() | tmp
 PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg_nr
-        $00..$75:
+        $00..$0C, $0F, $10..$12, $1B, $1C, $37, $38, $3A..$48, $6A..$6C, $75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start()
@@ -655,7 +667,7 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
 PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr): result | cmd_packet, tmp
 '' Write num_bytes to the slave device from the address stored in buff_addr
     case reg_nr
-        $00..$75:
+        $00..$0C, $0F, $10..$12, $1B, $1C, $37, $38, $3A..$48, $6A..$6C, $75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start()

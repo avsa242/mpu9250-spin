@@ -99,7 +99,7 @@ PUB Main | dispmode, axo, ayo, azo, gxo, gyo, gzo
             "r", "R":                                       ' Change display mode: raw/calculated
                 ser.Position(0, 10)
                 repeat 2
-                    ser.ClearLine(ser#CLR_CUR_TO_END)
+                    ser.clearline{}
                     ser.Newline
                 dispmode ^= 1
 
@@ -129,7 +129,7 @@ PUB AccelCalc | ax, ay, az
     ser.Str (int.DecPadded (ax, 10))
     ser.Str (int.DecPadded (ay, 10))
     ser.Str (int.DecPadded (az, 10))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline{}
     ser.Newline
 
 PUB AccelRaw | ax, ay, az
@@ -140,7 +140,7 @@ PUB AccelRaw | ax, ay, az
     ser.Str (int.DecPadded (ax, 7))
     ser.Str (int.DecPadded (ay, 7))
     ser.Str (int.DecPadded (az, 7))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline{}
     ser.Newline
 
 PUB GyroCalc | gx, gy, gz
@@ -151,7 +151,7 @@ PUB GyroCalc | gx, gy, gz
     ser.Str (int.DecPadded (gx, 11))
     ser.Str (int.DecPadded (gy, 11))
     ser.Str (int.DecPadded (gz, 11))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline{}
     ser.newline
 
 PUB GyroRaw | gx, gy, gz
@@ -162,7 +162,7 @@ PUB GyroRaw | gx, gy, gz
     ser.Str (int.DecPadded (gx, 7))
     ser.Str (int.DecPadded (gy, 7))
     ser.Str (int.DecPadded (gz, 7))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline{}
     ser.newline
 
 PUB MagCalc | mx, my, mz
@@ -173,7 +173,7 @@ PUB MagCalc | mx, my, mz
     ser.Str (int.DecPadded (mx, 10))
     ser.Str (int.DecPadded (my, 10))
     ser.Str (int.DecPadded (mz, 10))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline{}
     ser.newline
 
 PUB MagRaw | mx, my, mz
@@ -184,7 +184,7 @@ PUB MagRaw | mx, my, mz
     ser.Str (int.DecPadded (mx, 7))
     ser.Str (int.DecPadded (my, 7))
     ser.Str (int.DecPadded (mz, 7))
-    ser.clearline(ser#CLR_CUR_TO_END)
+    ser.clearline{}
     ser.newline
 
 PUB Calibrate
