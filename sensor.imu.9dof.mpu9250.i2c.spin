@@ -308,24 +308,22 @@ PUB IntActiveState(state): curr_state
     state := ((curr_state & core#MASK_ACTL) | state) & core#INT_BYPASS_CFG_MASK
     writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @state)
 
-PUB IntClearedBy(method) | tmp
+PUB IntClearedBy(method): curr_setting
 ' Select method by which interrupt status may be cleared
 '   Valid values:
 '      *READ_INT_FLAG (0): Only by reading interrupt flags
 '       ANY (1): By any read operation
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    curr_setting := 0
+    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_setting)
     case method
         ANY, READ_INT_FLAG:
             method := method << core#FLD_INT_ANYRD_2CLEAR
         OTHER:
-            result := (tmp >> core#FLD_INT_ANYRD_2CLEAR) & %1
-            return
+            return (curr_setting >> core#FLD_INT_ANYRD_2CLEAR) & %1
 
-    tmp &= core#MASK_INT_ANYRD_2CLEAR
-    tmp := (tmp | method) & core#INT_BYPASS_CFG_MASK
-    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    method := ((curr_setting & core#MASK_INT_ANYRD_2CLEAR) | method) & core#INT_BYPASS_CFG_MASK
+    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @method)
 
 PUB Interrupt
 ' Indicates one or more interrupts have been asserted
