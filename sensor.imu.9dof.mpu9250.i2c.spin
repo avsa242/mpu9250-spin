@@ -106,22 +106,22 @@ PUB Stop
 ' Put any other housekeeping code here required/recommended by your device before shutting down
     i2c.terminate
 
-PUB AccelAxisEnabled(xyz_mask) | tmp, bits
+PUB AccelAxisEnabled(xyz_mask): curr_mask
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
 '               XYZ
 '   Any other value polls the chip and returns the current setting
-    readReg(SLAVE_XLG, core#PWR_MGMT_2, 1, @tmp)
+    curr_mask := 0
+    readreg(SLAVE_XLG, core#PWR_MGMT_2, 1, @curr_mask)
     case xyz_mask
         %000..%111:
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZA) << core#FLD_DISABLE_XYZA
         OTHER:
-            return ((tmp >> core#FLD_DISABLE_XYZA) & core#BITS_DISABLE_XYZA) ^ core#DISABLE_INVERT
+            return ((curr_mask >> core#FLD_DISABLE_XYZA) & core#BITS_DISABLE_XYZA) ^ core#DISABLE_INVERT
 
-    tmp &= core#MASK_DISABLE_XYZA
-    tmp := (tmp | xyz_mask) & core#PWR_MGMT_2_MASK
-    writeReg(SLAVE_XLG, core#PWR_MGMT_2, 1, @tmp)
+    xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZA) | xyz_mask) & core#PWR_MGMT_2_MASK
+    writereg(SLAVE_XLG, core#PWR_MGMT_2, 1, @tmp)
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read accelerometer data
