@@ -132,15 +132,15 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
-PUB AccelDataReady
+PUB AccelDataReady{}: flag
 ' Flag indicating new accelerometer data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    return XLGDataReady
+    return xlgdataready{}
 
-PUB AccelG(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
 ' Read accelerometer data, calculated
 '   Returns: Linear acceleration in millionths of a g
-    AccelData(@tmpx, @tmpy, @tmpz)
+    acceldata(@tmpx, @tmpy, @tmpz)
     long[ptr_x] := (tmpx * _accel_cnts_per_lsb)
     long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
     long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
