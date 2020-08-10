@@ -325,34 +325,32 @@ PUB IntClearedBy(method): curr_setting
     method := ((curr_setting & core#MASK_INT_ANYRD_2CLEAR) | method) & core#INT_BYPASS_CFG_MASK
     writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @method)
 
-PUB Interrupt
+PUB Interrupt{}: flag
 ' Indicates one or more interrupts have been asserted
 '   Returns: non-zero result if any interrupts have been asserted:
 '       INT_WAKE_ON_MOTION (64) - Wake on motion interrupt occurred
 '       INT_FIFO_OVERFLOW (16) - FIFO overflowed
 '       INT_FSYNC (8) - FSYNC interrupt occurred
 '       INT_SENSOR_READY (1) - Sensor raw data updated
-    result := $00
-    readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
+    flag := 0
+    readreg(SLAVE_XLG, core#INT_STATUS, 1, @flag)
 
-PUB IntLatchEnabled(enable) | tmp
+PUB IntLatchEnabled(enable): curr_setting
 ' Latch interrupt pin when interrupt asserted
 '   Valid values:
 '      *FALSE (0): Interrupt pin is pulsed (width = 50uS)
 '       TRUE (-1): Interrupt pin is latched, and must be cleared explicitly
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
-    case ||enable
+    curr_setting := 0
+    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_setting)
+    case ||(enable)
         0, 1:
-            enable := (||enable << core#FLD_LATCH_INT_EN)
+            enable := (||(enable) << core#FLD_LATCH_INT_EN)
         OTHER:
-            result := ((tmp >> core#FLD_LATCH_INT_EN) & %1) * TRUE
-            return
+            return ((curr_setting >> core#FLD_LATCH_INT_EN) & %1) == 1
 
-    tmp &= core#MASK_LATCH_INT_EN
-    tmp := (tmp | enable) & core#INT_BYPASS_CFG_MASK
-    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    enable := ((curr_setting & core#MASK_LATCH_INT_EN) | enable) & core#INT_BYPASS_CFG_MASK
+    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @enable)
 
 PUB IntMask(mask) | tmp
 ' Allow interrupts to assert INT pin, set by mask, or by ORing together symbols shown below
