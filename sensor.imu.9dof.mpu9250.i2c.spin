@@ -388,23 +388,21 @@ PUB IntOutputType(pp_od): curr_setting
     pp_od := ((curr_setting & core#MASK_OPEN) | pp_od) & core#INT_BYPASS_CFG_MASK
     writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @pp_od)
 
-PUB MagADCRes(bits) | tmp
+PUB MagADCRes(bits): curr_res
 ' Set magnetometer ADC resolution, in bits
 '   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+    curr_res := 0
+    readreg(SLAVE_MAG, core#CNTL1, 1, @curr_res)
     case bits
         14, 16:
             bits := lookdownz(bits: 14, 16) << core#FLD_BIT
         OTHER:
-            tmp := (tmp >> core#FLD_BIT) & %1
-            result := lookupz(tmp: 14, 16)
-            return
+            curr_res := (curr_res >> core#FLD_BIT) & %1
+            return lookupz(curr_res: 14, 16)
 
-    tmp &= core#MASK_BIT
-    tmp := (tmp | bits) & core#CNTL1_MASK
-    writeReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+    bits := ((curr_res & core#MASK_BIT) | bits) & core#CNTL1_MASK
+    writereg(SLAVE_MAG, core#CNTL1, 1, @bits)
 
 PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read Magnetometer data
