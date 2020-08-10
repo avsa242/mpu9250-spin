@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Jun 12, 2020
+    Updated Aug 10, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -15,6 +15,8 @@ CON
     I2C_MAX_FREQ                = 400_000
     SLAVE_ADDR                  = $68 << 1
     SLAVE_ADDR_MAG              = $0C << 1
+
+    DEVID_RESP                  = $7148
 
 ' Startup time
     TREGRW                      = 100               ' ms

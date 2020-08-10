@@ -75,7 +75,7 @@ OBJ
 PUB Null
 ''This is not a top-level object
 
-PUB Start: okay                                                 'Default to "standard" Propeller I2C pins and 400kHz
+PUB Start{}: okay                                                 ' Default to "standard" Propeller I2C pins and 400kHz
 
     okay := Startx (DEF_SCL, DEF_SDA, DEF_HZ)
 
@@ -83,16 +83,16 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
 
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31)
         if I2C_HZ =< core#I2C_MAX_FREQ
-            if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    'I2C Object Started?
-                time.USleep (core#TREGRW)
-                if i2c.present (SLAVE_XLG)                      'Response from device?
-                    if DeviceID(SLAVE_XLG) == core#WHO_AM_I_RESP'Is it really an MPU9250?
-                        disableI2CMaster                        ' Bypass the internal I2C master so we can read the Mag from the same bus
-                        ReadMagAdj
-                        MagSoftReset
+            if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    ' I2C Object Started?
+                time.usleep (core#TREGRW)
+                if i2c.present (SLAVE_XLG)                      ' Response from device?
+                    if deviceid == core#DEVID_RESP              ' Is it really an MPU9250?
+                        disablei2cmaster                        ' Bypass the internal I2C master so we can read the Mag from the same bus
+                        readmagadj
+                        magsoftreset
                         return okay
 
-    return FALSE                                                'If we got here, something went wrong
+    return FALSE                                                ' If we got here, something went wrong
 
 PUB Defaults
 
@@ -198,19 +198,10 @@ PUB AccelScale(g): curr_scl
     g := ((curr_scl & core#MASK_ACCEL_FS_SEL) | g) & core#ACCEL_CFG_MASK
     writereg(SLAVE_XLG, core#ACCEL_CFG, 1, @g)
 
-PUB DeviceID(sub_device)
-' Read device ID from sub_device
-'   Valid values:
-'       SLAVE_XLG($68): Return device ID from accelerometer/gyro
-'       SLAVE_MAG($0C): Return device ID from magnetometer
-'   Any other value is ignored
-    case sub_device
-        SLAVE_MAG:
-            readReg (SLAVE_MAG, core#WIA, 1, @result)
-        SLAVE_XLG:
-            readReg (SLAVE_XLG, core#WHO_AM_I, 1, @result)
-        OTHER:
-            return FALSE
+PUB DeviceID{}: id
+' Read device ID
+    readreg(SLAVE_MAG, core#WIA, 1, @id.byte[0])
+    readreg(SLAVE_XLG, core#WHO_AM_I, 1, @id.byte[1])
 
 PUB FSYNCActiveState(state) | tmp
 ' Set FSYNC pin active state/logic level
