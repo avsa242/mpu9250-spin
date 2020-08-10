@@ -235,18 +235,14 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZG) | xyz_mask) & core#PWR_MGMT_2_MASK
     writereg(SLAVE_XLG, core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read gyro data
     tmp := $00
-    readReg(SLAVE_XLG, core#GYRO_XOUT_H, 6, @tmp)
+    readreg(SLAVE_XLG, core#GYRO_XOUT_H, 6, @tmp)
 
-    tmpx := (tmp.byte[0] << 8) | (tmp.byte[1])
-    tmpy := (tmp.byte[2] << 8) | (tmp.byte[3])
-    tmpz := (tmp.byte[4] << 8) | (tmp.byte[5])
-
-    long[ptr_x] := ~~tmpx
-    long[ptr_y] := ~~tmpy
-    long[ptr_z] := ~~tmpz
+    long[ptr_x] := ~~tmp.word[2]
+    long[ptr_y] := ~~tmp.word[1]
+    long[ptr_z] := ~~tmp.word[0]
 
 PUB GyroDataReady
 ' Flag indicating new gyroscope data available
@@ -614,7 +610,7 @@ PRI disableI2CMaster | tmp
 PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg_nr                                             ' Basic register validation
-        $00..$3A, $41..$75:
+        $00..$3A, $41, $42, $6A..$75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start
@@ -623,7 +619,7 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             i2c.write (slave_id|1)
             i2c.rd_block (buff_addr, nr_bytes, TRUE)
             i2c.stop
-        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L:
+        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, core#GYRO_XOUT_H..core#GYRO_ZOUT_L:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start
