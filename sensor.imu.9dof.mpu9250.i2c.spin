@@ -293,22 +293,20 @@ PUB GyroScale(dps): curr_scl
     dps := ((curr_scl & core#MASK_GYRO_FS_SEL) | dps) & core#GYRO_CFG_MASK
     writereg(SLAVE_XLG, core#GYRO_CFG, 1, @dps)
 
-PUB IntActiveState(state) | tmp
+PUB IntActiveState(state): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    curr_state := 0
+    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_state)
     case state
         LOW, HIGH:
             state := state << core#FLD_ACTL
         OTHER:
-            result := (tmp >> core#FLD_ACTL) & %1
-            return
+            return (curr_state >> core#FLD_ACTL) & %1
 
-    tmp &= core#MASK_ACTL
-    tmp := (tmp | state) & core#INT_BYPASS_CFG_MASK
-    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    state := ((curr_state & core#MASK_ACTL) | state) & core#INT_BYPASS_CFG_MASK
+    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @state)
 
 PUB IntClearedBy(method) | tmp
 ' Select method by which interrupt status may be cleared
