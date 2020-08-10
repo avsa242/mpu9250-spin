@@ -218,22 +218,22 @@ PUB FSYNCActiveState(state): curr_state
     state := ((curr_state & core#MASK_ACTL_FSYNC) | state) & core#INT_BYPASS_CFG_MASK
     writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @state)
 
-PUB GyroAxisEnabled(xyz_mask) | tmp, bits
+PUB GyroAxisEnabled(xyz_mask): curr_mask
 ' Enable data output for Gyroscope - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
 '               XYZ
 '   Any other value polls the chip and returns the current setting
-    readReg(SLAVE_XLG, core#PWR_MGMT_2, 1, @tmp)
+    curr_mask := 0
+    readreg(SLAVE_XLG, core#PWR_MGMT_2, 1, @curr_mask)
     case xyz_mask
         %000..%111:
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZG) << core#FLD_DISABLE_XYZG
         OTHER:
-            return ((tmp >> core#FLD_DISABLE_XYZG) & core#BITS_DISABLE_XYZG) ^ core#DISABLE_INVERT
+            return ((curr_mask >> core#FLD_DISABLE_XYZG) & core#BITS_DISABLE_XYZG) ^ core#DISABLE_INVERT
 
-    tmp &= core#MASK_DISABLE_XYZG
-    tmp := (tmp | xyz_mask) & core#PWR_MGMT_2_MASK
-    writeReg(SLAVE_XLG, core#PWR_MGMT_2, 1, @tmp)
+    xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZG) | xyz_mask) & core#PWR_MGMT_2_MASK
+    writereg(SLAVE_XLG, core#PWR_MGMT_2, 1, @xyz_mask)
 
 PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read gyro data
