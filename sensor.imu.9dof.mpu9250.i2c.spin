@@ -155,51 +155,48 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp
 '               Pointers to variables to hold current settings for respective axes
     if rw == 0                                              ' Read current settings
         tmp := 0
-        readReg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
+        readreg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
         word[ptr_x] := tmp
 
         tmp := 0
-        readReg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
+        readreg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
         word[ptr_y] := tmp
 
         tmp := 0
-        readReg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
+        readreg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
         word[ptr_z] := tmp
     else                                                    ' Write new settings
         tmp := 0
         tmp := ptr_x
         tmp <<= 1
-        writeReg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
+        writereg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
 
         tmp := 0
         tmp := ptr_y
         tmp <<=1
-        writeReg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
+        writereg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
 
         tmp := 0
         tmp := ptr_z
         tmp <<= 1
-        writeReg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
+        writereg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
 
-
-PUB AccelScale(g) | tmp
+PUB AccelScale(g): curr_scl
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_XLG, core#ACCEL_CFG, 1, @tmp)
+    curr_scl := 0
+    readreg(SLAVE_XLG, core#ACCEL_CFG, 1, @curr_scl)
     case g
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
             _accel_cnts_per_lsb := lookupz(g >> core#FLD_ACCEL_FS_SEL: 61{598}, 122{1197}, 244{2394}, 488{4788})
         OTHER:
-            tmp := (tmp >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
-            result := lookupz(tmp: 2, 4, 8, 16)
-            return
+            curr_scl := (curr_scl >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
+            return lookupz(curr_scl: 2, 4, 8, 16)
 
-    tmp &= core#MASK_ACCEL_FS_SEL
-    tmp := (tmp | g) & core#ACCEL_CFG_MASK
-    writeReg(SLAVE_XLG, core#ACCEL_CFG, 1, @tmp)
+    g := ((curr_scl & core#MASK_ACCEL_FS_SEL) | g) & core#ACCEL_CFG_MASK
+    writereg(SLAVE_XLG, core#ACCEL_CFG, 1, @g)
 
 PUB DeviceID(sub_device)
 ' Read device ID from sub_device
