@@ -564,11 +564,11 @@ PUB TempScale(scale)
         OTHER:
             return _temp_scale
 
-PUB XLGDataReady
-' Indicates new gyroscope/accelerometer data is ready to be read
+PUB XLGDataReady{}: flag
+' Flag indicating new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    readReg(SLAVE_XLG, core#INT_STATUS, 1, @result)
-    result := (result & %1) * TRUE
+    readreg(SLAVE_XLG, core#INT_STATUS, 1, @flag)
+    return (flag & %1) == 1
 
 PUB XLGSoftReset | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
