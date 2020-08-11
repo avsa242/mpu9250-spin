@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 10, 2020
+    Updated Aug 11, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -22,7 +22,7 @@ CON
 
     DEF_SCL             = 28
     DEF_SDA             = 29
-    DEF_HZ              = 400_000
+    DEF_HZ              = 100_000
     I2C_MAX_FREQ        = core#I2C_MAX_FREQ
 
     X_AXIS              = 0
@@ -75,7 +75,7 @@ OBJ
 PUB Null
 ''This is not a top-level object
 
-PUB Start{}: okay                                                 ' Default to "standard" Propeller I2C pins and 400kHz
+PUB Start{}: okay                                               ' Default to "standard" Propeller I2C pins and 100kHz
 
     okay := Startx (DEF_SCL, DEF_SDA, DEF_HZ)
 
@@ -86,23 +86,23 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
             if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    ' I2C Object Started?
                 time.usleep (core#TREGRW)
                 if i2c.present (SLAVE_XLG)                      ' Response from device?
-                    disablei2cmaster                            ' Bypass the internal I2C master so we can read the Mag from the same bus
-                    if deviceid == core#DEVID_RESP              ' Is it really an MPU9250?
-                        readmagadj
-                        magsoftreset
+                    disablei2cmaster{}                          ' Bypass the internal I2C master so we can read the Mag from the same bus
+                    if deviceid{} == core#DEVID_RESP            ' Is it really an MPU9250?
+                        readmagadj{}
+                        magsoftreset{}
                         return okay
 
     return FALSE                                                ' If we got here, something went wrong
 
 PUB Defaults
+' Factory default settings
+    ccelscale(2)
+    gyroscale(250)
+    magopmode(CONT100)
+    magscale(16)
+    tempscale(C)
 
-    AccelScale(2)
-    GyroScale(250)
-    MagOpMode(CONT100)
-    MagScale(16)
-    TempScale(C)
-
-PUB Stop
+PUB Stop{}
 ' Put any other housekeeping code here required/recommended by your device before shutting down
     i2c.terminate
 
@@ -117,7 +117,7 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
     case xyz_mask
         %000..%111:
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZA) << core#FLD_DISABLE_XYZA
-        OTHER:
+        other:
             return ((curr_mask >> core#FLD_DISABLE_XYZA) & core#BITS_DISABLE_XYZA) ^ core#DISABLE_INVERT
 
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZA) | xyz_mask) & core#PWR_MGMT_2_MASK
@@ -191,7 +191,7 @@ PUB AccelScale(g): curr_scl
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
             _accel_cnts_per_lsb := lookupz(g >> core#FLD_ACCEL_FS_SEL: 61{598}, 122{1197}, 244{2394}, 488{4788})
-        OTHER:
+        other:
             curr_scl := (curr_scl >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
             return lookupz(curr_scl: 2, 4, 8, 16)
 
@@ -213,7 +213,7 @@ PUB FSYNCActiveState(state): curr_state
     case state
         LOW, HIGH:
             state := state << core#FLD_ACTL_FSYNC
-        OTHER:
+        other:
             return (curr_state >> core#FLD_ACTL_FSYNC) & %1
 
     state := ((curr_state & core#MASK_ACTL_FSYNC) | state) & core#INT_BYPASS_CFG_MASK
@@ -230,7 +230,7 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
     case xyz_mask
         %000..%111:
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZG) << core#FLD_DISABLE_XYZG
-        OTHER:
+        other:
             return ((curr_mask >> core#FLD_DISABLE_XYZG) & core#BITS_DISABLE_XYZG) ^ core#DISABLE_INVERT
 
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZG) | xyz_mask) & core#PWR_MGMT_2_MASK
@@ -287,7 +287,7 @@ PUB GyroScale(dps): curr_scl
         250, 500, 1000, 2000:
             dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
             _gyro_cnts_per_lsb := lookupz(dps >> core#FLD_GYRO_FS_SEL: 7629, 15_258, 30_517, 61_035)  ' XXX unverified
-        OTHER:
+        other:
             curr_scl := (curr_scl >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
             return lookupz(curr_scl: 250, 500, 1000, 2000)
 
@@ -303,7 +303,7 @@ PUB IntActiveState(state): curr_state
     case state
         LOW, HIGH:
             state := state << core#FLD_ACTL
-        OTHER:
+        other:
             return (curr_state >> core#FLD_ACTL) & %1
 
     state := ((curr_state & core#MASK_ACTL) | state) & core#INT_BYPASS_CFG_MASK
@@ -320,7 +320,7 @@ PUB IntClearedBy(method): curr_setting
     case method
         ANY, READ_INT_FLAG:
             method := method << core#FLD_INT_ANYRD_2CLEAR
-        OTHER:
+        other:
             return (curr_setting >> core#FLD_INT_ANYRD_2CLEAR) & %1
 
     method := ((curr_setting & core#MASK_INT_ANYRD_2CLEAR) | method) & core#INT_BYPASS_CFG_MASK
@@ -347,7 +347,7 @@ PUB IntLatchEnabled(enable): curr_setting
     case ||(enable)
         0, 1:
             enable := (||(enable) << core#FLD_LATCH_INT_EN)
-        OTHER:
+        other:
             return ((curr_setting >> core#FLD_LATCH_INT_EN) & %1) == 1
 
     enable := ((curr_setting & core#MASK_LATCH_INT_EN) | enable) & core#INT_BYPASS_CFG_MASK
@@ -367,7 +367,7 @@ PUB IntMask(mask): curr_mask
         0:                                                                      ' allowed bits(INT_ENABLE_MASK). If only allowed bits are set, the result should be 0
             mask &= core#INT_ENABLE_MASK
             writereg(SLAVE_XLG, core#INT_ENABLE, 1, @mask)
-        OTHER:                                                                  ' and it will be considered valid.
+        other:                                                                  ' and it will be considered valid.
             curr_mask := 0
             readreg(SLAVE_XLG, core#INT_ENABLE, 1, @curr_mask)
             return curr_mask & core#INT_ENABLE_MASK
@@ -383,7 +383,7 @@ PUB IntOutputType(pp_od): curr_setting
     case pp_od
         INT_PP, INT_OD:
             pp_od := pp_od << core#FLD_OPEN
-        OTHER:
+        other:
             return (curr_setting >> core#FLD_OPEN) & %1
 
     pp_od := ((curr_setting & core#MASK_OPEN) | pp_od) & core#INT_BYPASS_CFG_MASK
@@ -398,7 +398,7 @@ PUB MagADCRes(bits): curr_res
     case bits
         14, 16:
             bits := lookdownz(bits: 14, 16) << core#FLD_BIT
-        OTHER:
+        other:
             curr_res := (curr_res >> core#FLD_BIT) & %1
             return lookupz(curr_res: 14, 16)
 
@@ -437,7 +437,7 @@ PUB MagDataRate(Hz)
             magopmode(CONT8)
         100:
             magopmode(CONT100)
-        OTHER:
+        other:
             case magopmode(-2)
                 CONT8:
                     return 8
@@ -483,7 +483,7 @@ PUB MagScale(scale): curr_scl ' XXX PRELIMINARY
             _mag_cnts_per_lsb := 5_997
         16:
             _mag_cnts_per_lsb := 1_499
-        OTHER:
+        other:
             return magadcres(-2)
 
     magadcres(scale)
@@ -497,7 +497,7 @@ PUB MagSelfTestEnabled(state): curr_state
     case ||(state)
         0, 1:
             state := (||(state) << core#FLD_SELF) & core#ASTC_MASK
-        OTHER:
+        other:
             return ((curr_state >> core#FLD_SELF) & %1) == 1
 
     state := (curr_state & core#MASK_SELF) | state
@@ -527,7 +527,7 @@ PUB MagOpMode(mode): curr_mode
     readreg(SLAVE_MAG, core#CNTL1, 1, @curr_mode)
     case mode
         POWERDOWN, SINGLE, CONT8, CONT100, EXT_TRIG, SELFTEST, FUSEACCESS:
-        OTHER:
+        other:
             return curr_mode & core#BITS_MODE
 
     mode := ((curr_mode & core#MASK_MODE) | mode) & core#CNTL1_MASK
@@ -549,7 +549,7 @@ PUB Temperature{}: temp
 
     case _temp_scale
         F:
-        OTHER:
+        other:
             return (( (temp * 1_0000) - 7_00) / 333_87) + 21_00 'XXX unverified
 
 PUB TempScale(scale)
@@ -561,7 +561,7 @@ PUB TempScale(scale)
     case scale
         C, F:
             _temp_scale := scale
-        OTHER:
+        other:
             return _temp_scale
 
 PUB XLGDataReady{}: flag
@@ -575,7 +575,7 @@ PUB XLGSoftReset{} | tmp
     tmp := 1 << core#FLD_H_RESET
     writereg(SLAVE_XLG, core#PWR_MGMT_1, 1, @tmp)
 
-PRI disableI2CMaster | tmp
+PRI disableI2CMaster{} | tmp
 
     tmp := 0
     readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
@@ -589,33 +589,33 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
         $00..$02, $09..$3A, $6A..$75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
-            i2c.start
+            i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
-            i2c.start
+            i2c.start{}
             i2c.write (slave_id|1)
             i2c.rd_block (buff_addr, nr_bytes, TRUE)
-            i2c.stop
+            i2c.stop{}
         core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, core#GYRO_XOUT_H..core#GYRO_ZOUT_L, core#TEMP_OUT_H:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
-            i2c.start
+            i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
-            i2c.start
+            i2c.start{}
             i2c.write (slave_id|1)
             repeat tmp from nr_bytes-1 to 0
                 byte[buff_addr][tmp] := i2c.read(tmp == 0)
-            i2c.stop
+            i2c.stop{}
         core#HXL..core#HZH:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
-            i2c.start
+            i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
-            i2c.start
+            i2c.start{}
             i2c.write (slave_id|1)
             repeat tmp from 0 to nr_bytes-1
                 byte[buff_addr][tmp] := i2c.read(tmp == nr_bytes-1)
-            i2c.stop
-        OTHER:
+            i2c.stop{}
+        other:
             return
 
 PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
@@ -624,20 +624,20 @@ PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
         $00..$75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
-            i2c.start
+            i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
             repeat tmp from 0 to nr_bytes-1
                 i2c.write (byte[buff_addr][tmp])
-            i2c.stop
+            i2c.stop{}
         core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
-            i2c.start
+            i2c.start{}
             i2c.wr_block(@cmd_packet, 2)
             repeat tmp from nr_bytes-1 to 0
                 i2c.write (byte[buff_addr][tmp])
-            i2c.stop
-        OTHER:
+            i2c.stop{}
+        other:
             return
 
 
