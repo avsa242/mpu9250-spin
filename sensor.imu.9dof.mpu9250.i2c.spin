@@ -434,22 +434,22 @@ PUB MagDataRate(Hz)
 '   NOTE: This setting switches to/only affects continuous measurement mode
     case Hz
         8:
-            MagOpMode(CONT8)
+            magopmode(CONT8)
         100:
-            MagOpMode(CONT100)
+            magopmode(CONT100)
         OTHER:
-            case MagOpMode(-2)
+            case magopmode(-2)
                 CONT8:
                     return 8
                 CONT100:
                     return 100
 
-PUB MagDataReady
-' Indicates new magnetometer data is ready to be read
+PUB MagDataReady{}: flag
+' Flag indicating new magnetometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    result := 0
-    readReg(SLAVE_MAG, core#ST1, 1, @result)
-    result := (result & %1) * TRUE
+    flag := 0
+    readreg(SLAVE_MAG, core#ST1, 1, @flag)
+    return (flag & %1) == 1
 
 PUB MagGauss(mx, my, mz) | tmpX, tmpY, tmpZ ' XXX unverified
 
