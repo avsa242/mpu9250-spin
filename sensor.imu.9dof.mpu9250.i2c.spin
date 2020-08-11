@@ -200,6 +200,7 @@ PUB AccelScale(g): curr_scl
 
 PUB DeviceID{}: id
 ' Read device ID
+    id := 0
     readreg(SLAVE_MAG, core#WIA, 1, @id.byte[0])
     readreg(SLAVE_XLG, core#WHO_AM_I, 1, @id.byte[1])
 
@@ -407,11 +408,11 @@ PUB MagADCRes(bits): curr_res
 PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
 ' Read Magnetometer data
     tmp := $00
-    readReg(SLAVE_MAG, core#HXL, 7, @tmp)
+    readreg(SLAVE_MAG, core#HXL, 7, @tmp)
 
-    tmpx := (((tmp.byte[0] << 8) | (tmp.byte[1])))
-    tmpy := (((tmp.byte[2] << 8) | (tmp.byte[3])))
-    tmpz := (((tmp.byte[4] << 8) | (tmp.byte[5])))
+    tmpx := (((tmp.byte[1] << 8) | (tmp.byte[0])))
+    tmpy := (((tmp.byte[3] << 8) | (tmp.byte[2])))
+    tmpz := (((tmp.byte[5] << 8) | (tmp.byte[4])))
 '    tmpx := tmpx * (( ((_mag_sens_adj[X_AXIS]-128)*1000) / 2) / 128) + 1
 '    tmpy := tmpy * (( ((_mag_sens_adj[Y_AXIS]-128)*1000) / 2) / 128) + 1
 '    tmpz := tmpz * (( ((_mag_sens_adj[Z_AXIS]-128)*1000) / 2) / 128) + 1
@@ -596,7 +597,7 @@ PRI disableI2CMaster | tmp
 PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg_nr                                             ' Basic register validation
-        $00..$3A, $41, $42, $6A..$75:
+        $00..$02, $09..$3A, $41, $42, $6A..$75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start
@@ -614,6 +615,16 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             i2c.write (slave_id|1)
             repeat tmp from nr_bytes-1 to 0
                 byte[buff_addr][tmp] := i2c.read(tmp == 0)
+            i2c.stop
+        core#HXL..core#HZH:
+            cmd_packet.byte[0] := slave_id
+            cmd_packet.byte[1] := reg_nr
+            i2c.start
+            i2c.wr_block (@cmd_packet, 2)
+            i2c.start
+            i2c.write (slave_id|1)
+            repeat tmp from 0 to nr_bytes-1
+                byte[buff_addr][tmp] := i2c.read(tmp == nr_bytes-1)
             i2c.stop
         OTHER:
             return
