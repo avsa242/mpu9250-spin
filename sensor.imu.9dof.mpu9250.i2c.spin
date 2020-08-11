@@ -475,7 +475,7 @@ PUB MagOverflow{}: flag
     readreg(SLAVE_MAG, core#ST2, 1, @flag)
     return ((flag >> core#FLD_HOFL) & %1) == 1
 
-PUB MagScale(scale) ' XXX PRELIMINARY
+PUB MagScale(scale): curr_scl ' XXX PRELIMINARY
 ' Set full-scale range of magnetometer, in bits
 '   Valid values: 14, 16
     case scale
@@ -484,28 +484,24 @@ PUB MagScale(scale) ' XXX PRELIMINARY
         16:
             _mag_cnts_per_lsb := 1_499
         OTHER:
-            result := MagADCRes(-2)
-            return
+            return magadcres(-2)
 
-    MagADCRes(scale)
+    magadcres(scale)
 
-PUB MagSelfTestEnabled(enable) | tmp
+PUB MagSelfTestEnabled(state): curr_state
 ' Enable magnetometer self-test mode (generates magnetic field)
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_MAG, core#ASTC, 1, @tmp)
-    case ||enable
+    curr_state := 0
+    readreg(SLAVE_MAG, core#ASTC, 1, @curr_state)
+    case ||(state)
         0, 1:
-            enable := (||enable << core#FLD_SELF) & core#ASTC_MASK
+            state := (||(state) << core#FLD_SELF) & core#ASTC_MASK
         OTHER:
-            tmp := (tmp >> core#FLD_SELF) & %1
-            result := tmp * TRUE
-            return
+            return ((curr_state >> core#FLD_SELF) & %1) == 1
 
-    tmp &= core#MASK_SELF
-    tmp := (tmp | enable)
-    writeReg(SLAVE_MAG, core#ASTC, 1, @tmp)
+    state := (curr_state & core#MASK_SELF) | state
+    writereg(SLAVE_MAG, core#ASTC, 1, @state)
 
 PUB MagSoftReset | tmp
 ' Perform soft-reset of magnetometer: initialize all registers
