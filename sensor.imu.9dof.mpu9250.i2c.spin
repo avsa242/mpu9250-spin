@@ -420,12 +420,12 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
     long[ptr_y] := ~~tmpy
     long[ptr_z] := ~~tmpz
 
-PUB MagDataOverrun
-' Indicates magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
+PUB MagDataOverrun{}: flag
+' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
-    result := $00
-    readReg(SLAVE_MAG, core#ST1, 1, @result)
-    result := ((result >> core#FLD_DOR) & %1) * TRUE
+    flag := 0
+    readreg(SLAVE_MAG, core#ST1, 1, @flag)
+    return ((flag >> core#FLD_DOR) & %1) == 1
 
 PUB MagDataRate(Hz)
 ' Set magnetometer output data rate, in Hz
