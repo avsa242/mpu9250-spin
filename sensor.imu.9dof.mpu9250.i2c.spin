@@ -451,29 +451,29 @@ PUB MagDataReady{}: flag
     readreg(SLAVE_MAG, core#ST1, 1, @flag)
     return (flag & %1) == 1
 
-PUB MagGauss(mx, my, mz) | tmpX, tmpY, tmpZ ' XXX unverified
+PUB MagGauss(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
 
-    MagData(@tmpX, @tmpY, @tmpZ)
-    long[mx] := (tmpX * _mag_cnts_per_lsb)
-    long[my] := (tmpY * _mag_cnts_per_lsb)
-    long[mz] := (tmpZ * _mag_cnts_per_lsb)
+    magdata(@tmpx, @tmpy, @tmpz)
+    long[mx] := (tmpx * _mag_cnts_per_lsb)
+    long[my] := (tmpy * _mag_cnts_per_lsb)
+    long[mz] := (tmpz * _mag_cnts_per_lsb)
 
-PUB MagTesla(mx, my, mz) | tmpX, tmpY, tmpZ
+PUB MagTesla(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
 ' Read magnetomer data, calculated
 '   Returns: Magnetic field strength, in thousandths of a micro-Tesla/nano-Tesla (i.e., 12000 = 12uT)
-    MagData(@tmpX, @tmpY, @tmpZ)
-    long[mx] := (((tmpX * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-    long[my] := (((tmpY * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-    long[mz] := (((tmpZ * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    magdata(@tmpx, @tmpy, @tmpz)
+    long[mx] := (((tmpx * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[my] := (((tmpy * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[mz] := (((tmpz * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
 
-PUB MagOverflow
-' Indicates magnetometer measurement has overflowed
+PUB MagOverflow{}: flag
+' Flag indicating magnetometer measurement has overflowed
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
 '   NOTE: If this flag is TRUE, measurement data should not be trusted
 '   NOTE: This bit self-clears when the next measurement starts
-    result := $00
-    readReg(SLAVE_MAG, core#ST2, 1, @result)
-    result := ((result >> core#FLD_HOFL) & %1) * TRUE
+    flag := 0
+    readreg(SLAVE_MAG, core#ST2, 1, @flag)
+    return ((flag >> core#FLD_HOFL) & %1) == 1
 
 PUB MagScale(scale) ' XXX PRELIMINARY
 ' Set full-scale range of magnetometer, in bits
