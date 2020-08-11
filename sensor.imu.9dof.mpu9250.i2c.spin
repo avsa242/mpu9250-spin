@@ -533,29 +533,24 @@ PUB MagOpMode(mode): curr_mode
     mode := ((curr_mode & core#MASK_MODE) | mode) & core#CNTL1_MASK
     writereg(SLAVE_MAG, core#CNTL1, 1, @mode)
 
-PUB ReadMagAdj
+PUB ReadMagAdj{}
 ' Read magnetometer factory sensitivity adjustment values
-    readReg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
+    readreg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
 
-PUB Reset
+PUB Reset{}
 ' Perform soft-reset
-    MagSoftReset
-    XLGSoftReset
+    magsoftreset{}
+    xlgsoftreset{}
 
-PUB Temperature
+PUB Temperature{}: temp
 ' Read temperature, in hundredths of a degree
-    result := $00
-    readReg(SLAVE_XLG, core#TEMP_OUT_H, 2, @result)
-    result.byte[3] := result.byte[0]    'Swap byte order
-    result.byte[0] := result.byte[1]
-    result.byte[1] := result.byte[3]
-    result.byte[3] := 0
+    temp := 0
+    readreg(SLAVE_XLG, core#TEMP_OUT_H, 2, @temp)
 
     case _temp_scale
         F:
         OTHER:
-            result := (( (result * 1_0000) - 7_00) / 333_87) + 21_00
-            return
+            return (( (temp * 1_0000) - 7_00) / 333_87) + 21_00 'XXX unverified
 
 PUB TempScale(scale)
 ' Set temperature scale used by Temperature method
@@ -591,7 +586,7 @@ PRI disableI2CMaster | tmp
 PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
     case reg_nr                                             ' Basic register validation
-        $00..$02, $09..$3A, $41, $42, $6A..$75:
+        $00..$02, $09..$3A, $6A..$75:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start
@@ -600,7 +595,7 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             i2c.write (slave_id|1)
             i2c.rd_block (buff_addr, nr_bytes, TRUE)
             i2c.stop
-        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, core#GYRO_XOUT_H..core#GYRO_ZOUT_L:
+        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, core#GYRO_XOUT_H..core#GYRO_ZOUT_L, core#TEMP_OUT_H:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start
