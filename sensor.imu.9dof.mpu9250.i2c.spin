@@ -86,8 +86,8 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
             if okay := i2c.setupx (SCL_PIN, SDA_PIN, I2C_HZ)    ' I2C Object Started?
                 time.usleep (core#TREGRW)
                 if i2c.present (SLAVE_XLG)                      ' Response from device?
+                    disablei2cmaster                            ' Bypass the internal I2C master so we can read the Mag from the same bus
                     if deviceid == core#DEVID_RESP              ' Is it really an MPU9250?
-                        disablei2cmaster                        ' Bypass the internal I2C master so we can read the Mag from the same bus
                         readmagadj
                         magsoftreset
                         return okay
@@ -570,18 +570,18 @@ PUB XLGDataReady{}: flag
     readreg(SLAVE_XLG, core#INT_STATUS, 1, @flag)
     return (flag & %1) == 1
 
-PUB XLGSoftReset | tmp
+PUB XLGSoftReset{} | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
     tmp := 1 << core#FLD_H_RESET
-    writeReg(SLAVE_XLG, core#PWR_MGMT_1, 1, @tmp)
+    writereg(SLAVE_XLG, core#PWR_MGMT_1, 1, @tmp)
 
 PRI disableI2CMaster | tmp
 
-    tmp := $00
-    readReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    tmp := 0
+    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
     tmp &= core#MASK_BYPASS_EN
     tmp := (tmp | 1 << core#FLD_BYPASS_EN)
-    writeReg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
 
 PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Read num_bytes from the slave device into the address stored in buff_addr
