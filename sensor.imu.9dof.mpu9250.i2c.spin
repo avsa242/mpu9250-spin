@@ -503,16 +503,16 @@ PUB MagSelfTestEnabled(state): curr_state
     state := (curr_state & core#MASK_SELF) | state
     writereg(SLAVE_MAG, core#ASTC, 1, @state)
 
-PUB MagSoftReset | tmp
+PUB MagSoftReset{} | tmp
 ' Perform soft-reset of magnetometer: initialize all registers
     tmp := %1 & core#CNTL2_MASK
-    writeReg(SLAVE_MAG, core#CNTL2, 1, @tmp)
+    writereg(SLAVE_MAG, core#CNTL2, 1, @tmp)
 
-PUB MeasureMag
+PUB MeasureMag{}
 ' Perform magnetometer measurement
-    MagOpMode(SINGLE)
+    magopmode(SINGLE)
 
-PUB MagOpMode(mode) | tmp
+PUB MagOpMode(mode): curr_mode
 ' Set magnetometer operating mode
 '   Valid values:
 '      *POWERDOWN (0): Power down
@@ -523,17 +523,15 @@ PUB MagOpMode(mode) | tmp
 '       SELFTEST (8): Self-test mode
 '       FUSEACCESS (15): Fuse ROM access mode
 '   Any other value polls the chip and returns the current setting
-    tmp := $00
-    readReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+    curr_mode := 0
+    readreg(SLAVE_MAG, core#CNTL1, 1, @curr_mode)
     case mode
         POWERDOWN, SINGLE, CONT8, CONT100, EXT_TRIG, SELFTEST, FUSEACCESS:
         OTHER:
-            result := tmp & core#BITS_MODE
-            return
+            return curr_mode & core#BITS_MODE
 
-    tmp &= core#MASK_MODE
-    tmp := (tmp | mode) & core#CNTL1_MASK
-    writeReg(SLAVE_MAG, core#CNTL1, 1, @tmp)
+    mode := ((curr_mode & core#MASK_MODE) | mode) & core#CNTL1_MASK
+    writereg(SLAVE_MAG, core#CNTL1, 1, @mode)
 
 PUB ReadMagAdj
 ' Read magnetometer factory sensitivity adjustment values
