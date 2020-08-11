@@ -96,7 +96,7 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): okay
 
 PUB Defaults
 ' Factory default settings
-    ccelscale(2)
+    accelscale(2)
     gyroscale(250)
     magopmode(CONT100)
     magscale(16)
