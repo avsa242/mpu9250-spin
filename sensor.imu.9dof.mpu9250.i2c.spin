@@ -546,11 +546,10 @@ PUB Temperature{}: temp
 ' Read temperature, in hundredths of a degree
     temp := 0
     readreg(SLAVE_XLG, core#TEMP_OUT_H, 2, @temp)
-
     case _temp_scale
         F:
         other:
-            return (( (temp * 1_0000) - 7_00) / 333_87) + 21_00 'XXX unverified
+            return ((temp * 1_0000) / 333_87) + 21_00 'XXX unverified
 
 PUB TempScale(scale)
 ' Set temperature scale used by Temperature method
