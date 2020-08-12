@@ -252,7 +252,7 @@ PUB GyroDataReady{}: flag
 
 PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
 'Read gyroscope calibrated data (micro-degrees per second)
-    GyroData(@tmpx, @tmpy, @tmpz)
+    gyrodata(@tmpx, @tmpy, @tmpz)
     long[gx] := (tmpx * _gyro_cnts_per_lsb)
     long[gy] := (tmpy * _gyro_cnts_per_lsb)
     long[gz] := (tmpz * _gyro_cnts_per_lsb)
@@ -286,7 +286,7 @@ PUB GyroScale(dps): curr_scl
     case dps
         250, 500, 1000, 2000:
             dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
-            _gyro_cnts_per_lsb := lookupz(dps >> core#FLD_GYRO_FS_SEL: 7629, 15_258, 30_517, 61_035)  ' XXX unverified
+            _gyro_cnts_per_lsb := lookupz(dps >> core#FLD_GYRO_FS_SEL: 7633, 15_267, 30_487, 60_975)    ' 1/131, 1/65.5, 1/32.8, 1/16.4 * 1_000_000
         other:
             curr_scl := (curr_scl >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
             return lookupz(curr_scl: 250, 500, 1000, 2000)
