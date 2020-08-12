@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 11, 2020
+    Updated Aug 12, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -62,8 +62,8 @@ CON
 
 VAR
 
-    long _mag_sens_adj[3]
     word _accel_cnts_per_lsb, _gyro_cnts_per_lsb, _mag_cnts_per_lsb
+    byte _mag_sens_adj[3]
     byte _temp_scale
 
 OBJ
@@ -405,20 +405,14 @@ PUB MagADCRes(bits): curr_res
     bits := ((curr_res & core#MASK_BIT) | bits) & core#CNTL1_MASK
     writereg(SLAVE_MAG, core#CNTL1, 1, @bits)
 
-PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2], tmpx, tmpy, tmpz
+PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read Magnetometer data
     tmp := $00
-    readreg(SLAVE_MAG, core#HXL, 7, @tmp)
+    readreg(SLAVE_MAG, core#HXL, 7, @tmp)                   ' Extra read is for the status register (required)
 
-    tmpx := (((tmp.byte[1] << 8) | (tmp.byte[0])))
-    tmpy := (((tmp.byte[3] << 8) | (tmp.byte[2])))
-    tmpz := (((tmp.byte[5] << 8) | (tmp.byte[4])))
-'    tmpx := tmpx * (( ((_mag_sens_adj[X_AXIS]-128)*1000) / 2) / 128) + 1
-'    tmpy := tmpy * (( ((_mag_sens_adj[Y_AXIS]-128)*1000) / 2) / 128) + 1
-'    tmpz := tmpz * (( ((_mag_sens_adj[Z_AXIS]-128)*1000) / 2) / 128) + 1
-    long[ptr_x] := ~~tmpx
-    long[ptr_y] := ~~tmpy
-    long[ptr_z] := ~~tmpz
+    long[ptr_x] := ~~tmp.word[X_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
+    long[ptr_y] := ~~tmp.word[Y_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
+    long[ptr_z] := ~~tmp.word[Z_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
 
 PUB MagDataOverrun{}: flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
@@ -535,7 +529,9 @@ PUB MagOpMode(mode): curr_mode
 
 PUB ReadMagAdj{}
 ' Read magnetometer factory sensitivity adjustment values
+    magopmode(FUSEACCESS)
     readreg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
+    magopmode(CONT100)
 
 PUB Reset{}
 ' Perform soft-reset
