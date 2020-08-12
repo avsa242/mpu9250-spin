@@ -190,7 +190,7 @@ PUB AccelScale(g): curr_scl
     case g
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
-            _accel_cnts_per_lsb := lookupz(g >> core#FLD_ACCEL_FS_SEL: 61{598}, 122{1197}, 244{2394}, 488{4788})
+            _accel_cnts_per_lsb := lookupz(g >> core#FLD_ACCEL_FS_SEL: 61, 122, 244, 488)   ' 1/16384, 1/8192, 1/4096, 1/2048 * 1_000_000
         other:
             curr_scl := (curr_scl >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
             return lookupz(curr_scl: 2, 4, 8, 16)
