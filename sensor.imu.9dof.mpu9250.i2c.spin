@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 12, 2020
+    Updated Aug 13, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -616,7 +616,7 @@ PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
 '' Write num_bytes to the slave device from the address stored in buff_addr
     case reg_nr                                             ' Basic register validation
-        $00..$75:
+        core#SELF_TEST_X_GYRO..core#SELF_TEST_Z_GYRO, core#SELF_TEST_X_ACCEL..core#SELF_TEST_Z_ACCEL, core#SMPLRT_DIV..core#WOM_THR, core#FIFO_EN..core#I2C_SLV4_CTRL, core#INT_BYPASS_CFG, core#INT_ENABLE, core#I2C_SLV0_DO..core#PWR_MGMT_2, core#FIFO_COUNTH..core#FIFO_R_W:
             cmd_packet.byte[0] := slave_id
             cmd_packet.byte[1] := reg_nr
             i2c.start{}

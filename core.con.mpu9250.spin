@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 10, 2020
+    Updated Aug 13, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -22,9 +22,20 @@ CON
     TREGRW                      = 100               ' ms
 
 ' Accelerometer / Gyroscope registers
+    SELF_TEST_X_GYRO            = $00
+    SELF_TEST_Y_GYRO            = $01
+    SELF_TEST_Z_GYRO            = $02
+    SELF_TEST_X_ACCEL           = $0D
+    SELF_TEST_Y_ACCEL           = $0E
+    SELF_TEST_Z_ACCEL           = $0F
+
     XG_OFFS_USR                 = $13                       '..$14 (LSB)
     YG_OFFS_USR                 = $15                       '..$16 (LSB)
     ZG_OFFS_USR                 = $17                       '..$18 (LSB
+
+    SMPLRT_DIV                  = $19
+
+    CONFIG                      = $1A
 
     GYRO_CFG                    = $1B
     GYRO_CFG_MASK               = $FB
@@ -52,6 +63,34 @@ CON
         MASK_AY_ST_EN           = ACCEL_CFG_MASK ^ (1 << FLD_AY_ST_EN)
         MASK_AZ_ST_EN           = ACCEL_CFG_MASK ^ (1 << FLD_AZ_ST_EN)
         MASK_ACCEL_FS_SEL       = ACCEL_CFG_MASK ^ (BITS_ACCEL_FS_SEL << FLD_ACCEL_FS_SEL)
+
+    ACCEL_CFG2                  = $1D
+
+    LP_ACCEL_ODR                = $1E
+
+    WOM_THR                     = $1F
+
+    FIFO_EN                     = $23
+
+    I2C_MST_CTRL                = $24
+    I2C_SLV0_ADDR               = $25
+    I2C_SLV0_REG                = $26
+    I2C_SLV0_CTRL               = $27
+    I2C_SLV1_ADDR               = $28
+    I2C_SLV1_REG                = $29
+    I2C_SLV1_CTRL               = $2A
+    I2C_SLV2_ADDR               = $2B
+    I2C_SLV2_REG                = $2C
+    I2C_SLV2_CTRL               = $2D
+    I2C_SLV3_ADDR               = $2E
+    I2C_SLV3_REG                = $2F
+    I2C_SLV3_CTRL               = $30
+    I2C_SLV4_ADDR               = $31
+    I2C_SLV4_REG                = $32
+    I2C_SLV4_DO                 = $33
+    I2C_SLV4_CTRL               = $34
+    I2C_SLV4_DI                 = $35
+    I2C_MST_STATUS              = $36
 
     INT_BYPASS_CFG              = $37
     INT_BYPASS_CFG_MASK         = $FE
@@ -105,6 +144,42 @@ CON
     GYRO_ZOUT_H                 = $47
     GYRO_ZOUT_L                 = $48
 
+    EXT_SENS_DATA_00            = $49
+    EXT_SENS_DATA_01            = $4A
+    EXT_SENS_DATA_02            = $4B
+    EXT_SENS_DATA_03            = $4C
+    EXT_SENS_DATA_04            = $4D
+    EXT_SENS_DATA_05            = $4E
+    EXT_SENS_DATA_06            = $4F
+    EXT_SENS_DATA_07            = $50
+    EXT_SENS_DATA_08            = $51
+    EXT_SENS_DATA_09            = $52
+    EXT_SENS_DATA_10            = $53
+    EXT_SENS_DATA_11            = $54
+    EXT_SENS_DATA_12            = $55
+    EXT_SENS_DATA_13            = $56
+    EXT_SENS_DATA_14            = $57
+    EXT_SENS_DATA_15            = $58
+    EXT_SENS_DATA_16            = $59
+    EXT_SENS_DATA_17            = $5A
+    EXT_SENS_DATA_18            = $5B
+    EXT_SENS_DATA_19            = $5C
+    EXT_SENS_DATA_20            = $5D
+    EXT_SENS_DATA_21            = $5E
+    EXT_SENS_DATA_22            = $5F
+    EXT_SENS_DATA_23            = $60
+
+    I2C_SLV0_DO                 = $63
+    I2C_SLV1_DO                 = $64
+    I2C_SLV2_DO                 = $65
+    I2C_SLV3_DO                 = $66
+
+    I2C_MST_DELAY_CTRL          = $67
+
+    SIGNAL_PATH_RESET           = $68
+
+    MOT_DETECT_CTRL             = $69
+
     USER_CTRL                   = $6A
     USER_CTRL_MASK              = $77
         FLD_SIG_COND_RST        = 0
@@ -135,8 +210,12 @@ CON
         MASK_DISABLE_XYZG       = PWR_MGMT_2_MASK ^ (BITS_DISABLE_XYZG << FLD_DISABLE_XYZG)
         DISABLE_INVERT          = %111
 
+    FIFO_COUNTH                 = $72
+    FIFO_COUNTL                 = $73
+    FIFO_R_W                    = $74
+
     WHO_AM_I                    = $75
-    WHO_AM_I_RESP               = $71
+        WHO_AM_I_RESP           = $71
 
     XA_OFFS_H                   = $77                       ' ..$78 (LSB)
     YA_OFFS_H                   = $7A                       ' ..$7B (LSB)
@@ -144,9 +223,10 @@ CON
 
 ' Magnetometer registers
     WIA                         = $00
-    WIA_RESP                    = $48
+        WIA_RESP                = $48
 
     INFO                        = $01
+
     ST1                         = $02
     ST1_MASK                    = $03
         FLD_DOR                 = 1
