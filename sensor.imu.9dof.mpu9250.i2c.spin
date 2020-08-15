@@ -148,41 +148,39 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
     long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
     long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
 
-PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp
+PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == nonzero (write)
-'           ptr_x, ptr_y, ptr_z: 0..32767
+'           ptr_x, ptr_y, ptr_z: -16384..16383
 '       When rw == 0 (read)
 '           ptr_x, ptr_y, ptr_z:
 '               Pointers to variables to hold current settings for respective axes
-    if rw == 0                                              ' Read current settings
-        tmp := 0
-        readreg(core#XA_OFFS_H, 2, @tmp)
-        word[ptr_x] := tmp
+'   NOTE: The MPU9250 accelerometer is pre-programmed with offsets, which may or may not be adequate for your application
+    readreg(core#XA_OFFS_H, 2, @tmp[X_AXIS])                ' Discrete reads because the three axes
+    readreg(core#YA_OFFS_H, 2, @tmp[Y_AXIS])                '   aren't contiguous register pairs
+    readreg(core#ZA_OFFS_H, 2, @tmp[Z_AXIS])
 
-        tmp := 0
-        readreg(core#YA_OFFS_H, 2, @tmp)
-        word[ptr_y] := tmp
+    case rw
+        W:
+            tc_bit[X_AXIS] := tmp[X_AXIS] & 1               ' LSB of each axis' data is a temperature compensation flag
+            tc_bit[Y_AXIS] := tmp[Y_AXIS] & 1
+            tc_bit[Z_AXIS] := tmp[Z_AXIS] & 1
 
-        tmp := 0
-        readreg(core#ZA_OFFS_H, 2, @tmp)
-        word[ptr_z] := tmp
-    else                                                    ' Write new settings
-        tmp := 0
-        tmp := ptr_x
-        tmp <<= 1
-        writereg(core#XA_OFFS_H, 2, @tmp)
+            ptr_x := (ptr_x & $FFFE) | tc_bit[X_AXIS]
+            ptr_y := (ptr_y & $FFFE) | tc_bit[Y_AXIS]
+            ptr_z := (ptr_z & $FFFE) | tc_bit[Z_AXIS]
 
-        tmp := 0
-        tmp := ptr_y
-        tmp <<=1
-        writereg(core#YA_OFFS_H, 2, @tmp)
+            writereg(core#XA_OFFS_H, 2, @ptr_x)
+            writereg(core#YA_OFFS_H, 2, @ptr_y)
+            writereg(core#ZA_OFFS_H, 2, @ptr_z)
 
-        tmp := 0
-        tmp := ptr_z
-        tmp <<= 1
-        writereg(core#ZA_OFFS_H, 2, @tmp)
+        R:
+            long[ptr_x] := ~~tmp[X_AXIS]
+            long[ptr_y] := ~~tmp[Y_AXIS]
+            long[ptr_z] := ~~tmp[Z_AXIS]
+        other:
+            return
 
 PUB AccelScale(g): curr_scl
 ' Set accelerometer full-scale range, in g's
@@ -260,7 +258,7 @@ PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
     long[gy] := (tmpy * _gyro_cnts_per_lsb)
     long[gz] := (tmpz * _gyro_cnts_per_lsb)
 
-PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
+PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -268,17 +266,21 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
 '       When rw == R (0, read)
 '           ptr_x, ptr_y, ptr_z:
 '               Pointers to variables to hold current settings for respective axes
-    tmpxyz := 0
-    if rw == R                                              ' Read current bias offsets
-        readreg(core#XG_OFFS_USR, 6, @tmpxyz)
-        long[ptr_x] := tmpxyz.byte[5] << 8 | tmpxyz.byte[4]
-        long[ptr_y] := tmpxyz.byte[3] << 8 | tmpxyz.byte[2]
-        long[ptr_z] := tmpxyz.byte[1] << 8 | tmpxyz.byte[0]
-    elseif rw == W                                          ' Write new bias offsets
-        tmpxyz.word[X_AXIS] := ptr_x.byte[0] << 8 | ptr_x.byte[1]
-        tmpxyz.word[Y_AXIS] := ptr_y.byte[0] << 8 | ptr_y.byte[1]
-        tmpxyz.word[Z_AXIS] := ptr_z.byte[0] << 8 | ptr_z.byte[1]
-        writereg(core#XG_OFFS_USR, 6, @tmpxyz)
+    case rw
+        W:
+            writereg(core#XG_OFFS_USR, 2, @ptr_x)
+            writereg(core#YG_OFFS_USR, 2, @ptr_y)
+            writereg(core#ZG_OFFS_USR, 2, @ptr_z)
+
+        R:
+            readreg(core#XG_OFFS_USR, 2, @tmp[X_AXIS])
+            readreg(core#YG_OFFS_USR, 2, @tmp[Y_AXIS])
+            readreg(core#ZG_OFFS_USR, 2, @tmp[Z_AXIS])
+            long[ptr_x] := ~~tmp[X_AXIS]
+            long[ptr_y] := ~~tmp[Y_AXIS]
+            long[ptr_z] := ~~tmp[Z_AXIS]
+        other:
+            return
 
 PUB GyroScale(dps): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
@@ -591,7 +593,7 @@ PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             i2c.wr_block (@cmd_packet, 2)
             i2c.start{}
             i2c.write (SLAVE_XLG_RD)
-            repeat tmp from nr_bytes-1 to 0
+            repeat tmp from nr_bytes-1 to 0                 ' Read MSB to LSB (* relevant only to multi-byte registers)
                 byte[buff_addr][tmp] := i2c.read(tmp == 0)
             i2c.stop{}
         core#HXL, core#HYL, core#HZL, core#WIA..core#ASTC, core#I2CDIS..core#ASAZ:
@@ -615,7 +617,7 @@ PRI writeReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
             cmd_packet.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
-            repeat tmp from 0 to nr_bytes-1                 ' Write LSB to MSB (* relevant only to multi-byte registers)
+            repeat tmp from nr_bytes-1 to 0                 ' Write MSB to LSB (* relevant only to multi-byte registers)
                 i2c.write (byte[buff_addr][tmp])
             i2c.stop{}
         core#CNTL1..core#ASTC, core#I2CDIS:
