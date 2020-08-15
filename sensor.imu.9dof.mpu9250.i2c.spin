@@ -29,6 +29,9 @@ CON
     Y_AXIS              = 1
     Z_AXIS              = 2
 
+    R                   = 0
+    W                   = 1
+
 ' Magnetometer operating modes
     POWERDOWN           = %0000
     SINGLE              = %0001
@@ -260,21 +263,21 @@ PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
 PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
-'       When rw == nonzero (write)
-'           ptr_x, ptr_y, ptr_z: 0..65535
-'       When rw == 0 (read)
+'       When rw == W (1, write)
+'           ptr_x, ptr_y, ptr_z: -32768..32767
+'       When rw == R (0, read)
 '           ptr_x, ptr_y, ptr_z:
 '               Pointers to variables to hold current settings for respective axes
     tmpxyz := 0
-    if rw == 0
+    if rw == R                                              ' Read current bias offsets
         readreg(core#XG_OFFS_USR, 6, @tmpxyz)
-        long[ptr_x] := tmpxyz.word[0]
-        long[ptr_y] := tmpxyz.word[1]
-        long[ptr_z] := tmpxyz.word[2]
-    else
-        tmpxyz.word[0] := ptr_x
-        tmpxyz.word[1] := ptr_y
-        tmpxyz.word[2] := ptr_z
+        long[ptr_x] := tmpxyz.byte[5] << 8 | tmpxyz.byte[4]
+        long[ptr_y] := tmpxyz.byte[3] << 8 | tmpxyz.byte[2]
+        long[ptr_z] := tmpxyz.byte[1] << 8 | tmpxyz.byte[0]
+    elseif rw == W                                          ' Write new bias offsets
+        tmpxyz.word[X_AXIS] := ptr_x.byte[0] << 8 | ptr_x.byte[1]
+        tmpxyz.word[Y_AXIS] := ptr_y.byte[0] << 8 | ptr_y.byte[1]
+        tmpxyz.word[Z_AXIS] := ptr_z.byte[0] << 8 | ptr_z.byte[1]
         writereg(core#XG_OFFS_USR, 6, @tmpxyz)
 
 PUB GyroScale(dps): curr_scl
