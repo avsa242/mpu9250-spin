@@ -127,28 +127,6 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZA) | xyz_mask) & core#PWR_MGMT_2_MASK
     writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
-' Read accelerometer data
-    tmp := $00
-    readreg(core#ACCEL_XOUT_H, 6, @tmp)
-
-    long[ptr_x] := ~~tmp.word[2]
-    long[ptr_y] := ~~tmp.word[1]
-    long[ptr_z] := ~~tmp.word[0]
-
-PUB AccelDataReady{}: flag
-' Flag indicating new accelerometer data available
-'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    return xlgdataready{}
-
-PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
-' Read accelerometer data, calculated
-'   Returns: Linear acceleration in millionths of a g
-    acceldata(@tmpx, @tmpy, @tmpz)
-    long[ptr_x] := (tmpx * _accel_cnts_per_lsb)
-    long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
-    long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
-
 PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
@@ -182,6 +160,28 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
             long[ptr_z] := ~~tmp[Z_AXIS]
         other:
             return
+
+PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
+' Read accelerometer data
+    tmp := $00
+    readreg(core#ACCEL_XOUT_H, 6, @tmp)
+
+    long[ptr_x] := ~~tmp.word[2]
+    long[ptr_y] := ~~tmp.word[1]
+    long[ptr_z] := ~~tmp.word[0]
+
+PUB AccelDataReady{}: flag
+' Flag indicating new accelerometer data available
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    return xlgdataready{}
+
+PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
+' Read accelerometer data, calculated
+'   Returns: Linear acceleration in millionths of a g
+    acceldata(@tmpx, @tmpy, @tmpz)
+    long[ptr_x] := (tmpx * _accel_cnts_per_lsb)
+    long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
+    long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
 
 PUB AccelScale(g): curr_scl
 ' Set accelerometer full-scale range, in g's
@@ -238,27 +238,6 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZG) | xyz_mask) & core#PWR_MGMT_2_MASK
     writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
-' Read gyro data
-    tmp := $00
-    readreg(core#GYRO_XOUT_H, 6, @tmp)
-
-    long[ptr_x] := ~~tmp.word[2]
-    long[ptr_y] := ~~tmp.word[1]
-    long[ptr_z] := ~~tmp.word[0]
-
-PUB GyroDataReady{}: flag
-' Flag indicating new gyroscope data available
-'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    return xlgdataready{}
-
-PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
-'Read gyroscope calibrated data (micro-degrees per second)
-    gyrodata(@tmpx, @tmpy, @tmpz)
-    long[gx] := (tmpx * _gyro_cnts_per_lsb)
-    long[gy] := (tmpy * _gyro_cnts_per_lsb)
-    long[gz] := (tmpz * _gyro_cnts_per_lsb)
-
 PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
@@ -282,6 +261,27 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3]
             long[ptr_z] := ~~tmp[Z_AXIS]
         other:
             return
+
+PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
+' Read gyro data
+    tmp := $00
+    readreg(core#GYRO_XOUT_H, 6, @tmp)
+
+    long[ptr_x] := ~~tmp.word[2]
+    long[ptr_y] := ~~tmp.word[1]
+    long[ptr_z] := ~~tmp.word[0]
+
+PUB GyroDataReady{}: flag
+' Flag indicating new gyroscope data available
+'   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    return xlgdataready{}
+
+PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
+'Read gyroscope calibrated data (micro-degrees per second)
+    gyrodata(@tmpx, @tmpy, @tmpz)
+    long[gx] := (tmpx * _gyro_cnts_per_lsb)
+    long[gy] := (tmpy * _gyro_cnts_per_lsb)
+    long[gz] := (tmpz * _gyro_cnts_per_lsb)
 
 PUB GyroScale(dps): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
@@ -478,14 +478,6 @@ PUB MagGauss(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
     long[my] := (tmpy * _mag_cnts_per_lsb)
     long[mz] := (tmpz * _mag_cnts_per_lsb)
 
-PUB MagTesla(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
-' Read magnetomer data, calculated
-'   Returns: Magnetic field strength, in thousandths of a micro-Tesla/nano-Tesla (i.e., 12000 = 12uT)
-    magdata(@tmpx, @tmpy, @tmpz)
-    long[mx] := (((tmpx * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-    long[my] := (((tmpy * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-    long[mz] := (((tmpz * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-
 PUB MagOverflow{}: flag
 ' Flag indicating magnetometer measurement has overflowed
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
@@ -528,9 +520,13 @@ PUB MagSoftReset{} | tmp
     tmp := %1 & core#CNTL2_MASK
     writereg(core#CNTL2, 1, @tmp)
 
-PUB MeasureMag{}
-' Perform magnetometer measurement
-    magopmode(SINGLE)
+PUB MagTesla(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
+' Read magnetomer data, calculated
+'   Returns: Magnetic field strength, in thousandths of a micro-Tesla/nano-Tesla (i.e., 12000 = 12uT)
+    magdata(@tmpx, @tmpy, @tmpz)
+    long[mx] := (((tmpx * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[my] := (((tmpy * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[mz] := (((tmpz * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
 
 PUB MagOpMode(mode): curr_mode
 ' Set magnetometer operating mode
@@ -552,6 +548,10 @@ PUB MagOpMode(mode): curr_mode
 
     mode := ((curr_mode & core#MASK_MODE) | mode) & core#CNTL1_MASK
     writereg(core#CNTL1, 1, @mode)
+
+PUB MeasureMag{}
+' Perform magnetometer measurement
+    magopmode(SINGLE)
 
 PUB ReadMagAdj{}
 ' Read magnetometer factory sensitivity adjustment values

@@ -8,11 +8,12 @@ This is a P8X32A/Propeller, P2X8C4M64P/Propeller 2 driver object for the InvenSe
 ## Salient Features
 
 * I2C connection at up to 400kHz
-* Read accelerometer (raw, micro-g's), gyroscope (raw, micro-dps), magnetometer data (raw, nano-T)
+* Read accelerometer (raw, micro-g's), gyroscope (raw, micro-dps), magnetometer data (raw, gauss (untested/unverified), nano-Teslas (untested/unverified))
 * Set accel, gyro full-scale, mag ADC res
 * Data-ready flags
 * Set interrupt pin active state, output type, latching
 * Set magnetometer ADC resolution
+* Set bias offsets
 
 ## Requirements
 
@@ -41,6 +42,7 @@ P2/SPIN2:
 - [x] Confirm basic communication
 - [x] Implement methods to retrieve sensor registers
 - [x] Port to P2/SPIN2
-- [ ] Add support for sensor calibration offsets - WIP
+- [x] Add support for sensor calibration offsets
 - [x] Implement scaled sensor data methods
+- [ ] Calibration methods
 - [ ] SPI driver variant
