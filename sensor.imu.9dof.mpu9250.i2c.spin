@@ -233,6 +233,28 @@ PUB DeviceID{}: id
     readreg(core#WIA, 1, @id.byte[0])
     readreg(core#WHO_AM_I, 1, @id.byte[1])
 
+PUB FIFOSource(mask): curr_mask
+' Set FIFO source data, as a bitmask
+'   Valid values:
+'       Bits: 76543210
+'           7: Temperature
+'           6: Gyro X-axis
+'           5: Gyro Y-axis
+'           4: Gyro Z-axis
+'           3: Accelerometer
+'           2: I2C Slave #2
+'           1: I2C Slave #1
+'           0: I2C Slave #0
+'   Any other value polls the chip and returns the current setting
+'   NOTE: If any one of the Gyro axis bits or the temperature bits are set, all will be buffered, even if they're not explicitly enabled (chip limitation)
+    case mask
+        %00000000..%11111111:
+            writereg(core#FIFO_EN, 1, @mask)
+        other:
+            curr_mask := 0
+            readreg(core#FIFO_EN, 1, @curr_mask)
+            return
+
 PUB FSYNCActiveState(state): curr_state
 ' Set FSYNC pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
