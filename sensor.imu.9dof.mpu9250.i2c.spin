@@ -200,6 +200,33 @@ PUB AccelScale(g): curr_scl
     g := ((curr_scl & core#MASK_ACCEL_FS_SEL) | g) & core#ACCEL_CFG_MASK
     writereg(core#ACCEL_CFG, 1, @g)
 
+PUB CalibrateAccel{}
+
+PUB CalibrateGyro{}
+
+PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, samples, opmode_orig
+' Calibrate the magnetometer
+    longfill(@magmin, 0, 13)                                ' Initialize variables to 0
+    opmode_orig := magopmode(-2)                            ' Store the user's currently set mag operating mode,
+    magopmode(CONT100)                                      '   just in case it's not continuous, 100Hz
+    magbias(0, 0, 0, W)                                     ' Reset magnetometer bias offsets
+    samples := 10                                           ' # samples to use for mean
+
+    magdata(@magtmp[X_AXIS], @magtmp[Y_AXIS], @magtmp[Z_AXIS])
+    magmax[X_AXIS] := magmin[X_AXIS] := magtmp[X_AXIS]      ' Establish initial minimum and maximum values:
+    magmax[Y_AXIS] := magmin[Y_AXIS] := magtmp[Y_AXIS]      ' Start as the same value to avoid skewing the
+    magmax[Z_AXIS] := magmin[Z_AXIS] := magtmp[Z_AXIS]      '   calcs (because vars were initialized with 0)
+
+    repeat samples
+        repeat until magdataready{}
+        magdata(@magtmp[X_AXIS], @magtmp[Y_AXIS], @magtmp[Z_AXIS])
+        repeat axis from X_AXIS to Z_AXIS
+            magmax[axis] := magtmp[axis] #> magmax[axis]    ' Find the maximum value seen during sampling
+            magmin[axis] := magtmp[axis] <# magmin[axis]    '   as well as the minimum, for each axis
+
+    magbias((magmax[X_AXIS] + magmin[X_AXIS]) / 2, (magmax[Y_AXIS] + magmin[Y_AXIS]) / 2, (magmax[Z_AXIS] + magmin[Z_AXIS]) / 2, W) ' Write the mean of the samples just gathered as new bias offsets
+    magopmode(opmode_orig)                                  ' Restore the user's original operating mode
+
 PUB DeviceID{}: id
 ' Read device ID
     id := 0
@@ -436,9 +463,12 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
     tmp := $00
     readreg(core#HXL, 7, @tmp)                              ' Read 6 magnetometer data bytes, plus an extra (required) read of the status register
 
-    long[ptr_x] := ~~tmp.word[X_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000) + _mag_bias[X_AXIS]
-    long[ptr_y] := ~~tmp.word[Y_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000) + _mag_bias[Y_AXIS]
-    long[ptr_z] := ~~tmp.word[Z_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000) + _mag_bias[Z_AXIS]
+    tmp.word[X_AXIS] -= _mag_bias[X_AXIS]
+    tmp.word[Y_AXIS] -= _mag_bias[Y_AXIS]
+    tmp.word[Z_AXIS] -= _mag_bias[Z_AXIS]
+    long[ptr_x] := ~~tmp.word[X_AXIS] * _mag_sens_adj[X_AXIS]
+    long[ptr_y] := ~~tmp.word[Y_AXIS] * _mag_sens_adj[Y_AXIS]
+    long[ptr_z] := ~~tmp.word[Z_AXIS] * _mag_sens_adj[Z_AXIS]
 
 PUB MagDataOverrun{}: flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
@@ -558,6 +588,9 @@ PUB ReadMagAdj{}
     magopmode(FUSEACCESS)
     readreg(core#ASAX, 3, @_mag_sens_adj)
     magopmode(CONT100)
+    _mag_sens_adj[X_AXIS] := (((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)) / 1000
+    _mag_sens_adj[Y_AXIS] := (((((((_mag_sens_adj[Y_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)) / 1000
+    _mag_sens_adj[Z_AXIS] := (((((((_mag_sens_adj[Z_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)) / 1000
 
 PUB Reset{}
 ' Perform soft-reset
