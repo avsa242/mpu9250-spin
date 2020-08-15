@@ -65,6 +65,7 @@ CON
 
 VAR
 
+    long _mag_bias[3]
     word _accel_cnts_per_lsb, _gyro_cnts_per_lsb, _mag_cnts_per_lsb
     byte _mag_sens_adj[3]
     byte _temp_scale
@@ -151,9 +152,9 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
 PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
-'       When rw == nonzero (write)
+'       When rw == W (1, write)
 '           ptr_x, ptr_y, ptr_z: -16384..16383
-'       When rw == 0 (read)
+'       When rw == R (0, read)
 '           ptr_x, ptr_y, ptr_z:
 '               Pointers to variables to hold current settings for respective axes
 '   NOTE: The MPU9250 accelerometer is pre-programmed with offsets, which may or may not be adequate for your application
@@ -410,14 +411,34 @@ PUB MagADCRes(bits): curr_res
     bits := ((curr_res & core#MASK_BIT) | bits) & core#CNTL1_MASK
     writereg(core#CNTL1, 1, @bits)
 
+PUB MagBias(ptr_x, ptr_y, ptr_z, rw)
+' Read or write/manually set magnetometer calibration offset values
+'   Valid values:
+'       When rw == W (1, write)
+'           ptr_x, ptr_y, ptr_z: -32760..32760
+'       When rw == R (0, read)
+'           ptr_x, ptr_y, ptr_z:
+'               Pointers to variables to hold current settings for respective axes
+    case rw
+        W:
+            _mag_bias[X_AXIS] := ptr_x
+            _mag_bias[Y_AXIS] := ptr_y
+            _mag_bias[Z_AXIS] := ptr_z
+        R:
+            long[ptr_x] := _mag_bias[X_AXIS]
+            long[ptr_y] := _mag_bias[Y_AXIS]
+            long[ptr_z] := _mag_bias[Z_AXIS]
+        other:
+            return
+
 PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read Magnetometer data
     tmp := $00
     readreg(core#HXL, 7, @tmp)                              ' Read 6 magnetometer data bytes, plus an extra (required) read of the status register
 
-    long[ptr_x] := ~~tmp.word[X_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
-    long[ptr_y] := ~~tmp.word[Y_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
-    long[ptr_z] := ~~tmp.word[Z_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
+    long[ptr_x] := ~~tmp.word[X_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000) + _mag_bias[X_AXIS]
+    long[ptr_y] := ~~tmp.word[Y_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000) + _mag_bias[Y_AXIS]
+    long[ptr_z] := ~~tmp.word[Z_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000) + _mag_bias[Z_AXIS]
 
 PUB MagDataOverrun{}: flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
