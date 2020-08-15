@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 13, 2020
+    Updated Aug 15, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -113,7 +113,7 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
 '               XYZ
 '   Any other value polls the chip and returns the current setting
     curr_mask := 0
-    readreg(SLAVE_XLG, core#PWR_MGMT_2, 1, @curr_mask)
+    readreg(core#PWR_MGMT_2, 1, @curr_mask)
     case xyz_mask
         %000..%111:
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZA) << core#FLD_DISABLE_XYZA
@@ -121,12 +121,12 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
             return ((curr_mask >> core#FLD_DISABLE_XYZA) & core#BITS_DISABLE_XYZA) ^ core#DISABLE_INVERT
 
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZA) | xyz_mask) & core#PWR_MGMT_2_MASK
-    writereg(SLAVE_XLG, core#PWR_MGMT_2, 1, @xyz_mask)
+    writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read accelerometer data
     tmp := $00
-    readreg(SLAVE_XLG, core#ACCEL_XOUT_H, 6, @tmp)
+    readreg(core#ACCEL_XOUT_H, 6, @tmp)
 
     long[ptr_x] := ~~tmp.word[2]
     long[ptr_y] := ~~tmp.word[1]
@@ -155,38 +155,38 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp
 '               Pointers to variables to hold current settings for respective axes
     if rw == 0                                              ' Read current settings
         tmp := 0
-        readreg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
+        readreg(core#XA_OFFS_H, 2, @tmp)
         word[ptr_x] := tmp
 
         tmp := 0
-        readreg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
+        readreg(core#YA_OFFS_H, 2, @tmp)
         word[ptr_y] := tmp
 
         tmp := 0
-        readreg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
+        readreg(core#ZA_OFFS_H, 2, @tmp)
         word[ptr_z] := tmp
     else                                                    ' Write new settings
         tmp := 0
         tmp := ptr_x
         tmp <<= 1
-        writereg(SLAVE_XLG, core#XA_OFFS_H, 2, @tmp)
+        writereg(core#XA_OFFS_H, 2, @tmp)
 
         tmp := 0
         tmp := ptr_y
         tmp <<=1
-        writereg(SLAVE_XLG, core#YA_OFFS_H, 2, @tmp)
+        writereg(core#YA_OFFS_H, 2, @tmp)
 
         tmp := 0
         tmp := ptr_z
         tmp <<= 1
-        writereg(SLAVE_XLG, core#ZA_OFFS_H, 2, @tmp)
+        writereg(core#ZA_OFFS_H, 2, @tmp)
 
 PUB AccelScale(g): curr_scl
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
     curr_scl := 0
-    readreg(SLAVE_XLG, core#ACCEL_CFG, 1, @curr_scl)
+    readreg(core#ACCEL_CFG, 1, @curr_scl)
     case g
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
@@ -196,20 +196,20 @@ PUB AccelScale(g): curr_scl
             return lookupz(curr_scl: 2, 4, 8, 16)
 
     g := ((curr_scl & core#MASK_ACCEL_FS_SEL) | g) & core#ACCEL_CFG_MASK
-    writereg(SLAVE_XLG, core#ACCEL_CFG, 1, @g)
+    writereg(core#ACCEL_CFG, 1, @g)
 
 PUB DeviceID{}: id
 ' Read device ID
     id := 0
-    readreg(SLAVE_MAG, core#WIA, 1, @id.byte[0])
-    readreg(SLAVE_XLG, core#WHO_AM_I, 1, @id.byte[1])
+    readreg(core#WIA, 1, @id.byte[0])
+    readreg(core#WHO_AM_I, 1, @id.byte[1])
 
 PUB FSYNCActiveState(state): curr_state
 ' Set FSYNC pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
-    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_state)
+    readreg(core#INT_BYPASS_CFG, 1, @curr_state)
     case state
         LOW, HIGH:
             state := state << core#FLD_ACTL_FSYNC
@@ -217,7 +217,7 @@ PUB FSYNCActiveState(state): curr_state
             return (curr_state >> core#FLD_ACTL_FSYNC) & %1
 
     state := ((curr_state & core#MASK_ACTL_FSYNC) | state) & core#INT_BYPASS_CFG_MASK
-    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @state)
+    writereg(core#INT_BYPASS_CFG, 1, @state)
 
 PUB GyroAxisEnabled(xyz_mask): curr_mask
 ' Enable data output for Gyroscope - per axis
@@ -226,7 +226,7 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
 '               XYZ
 '   Any other value polls the chip and returns the current setting
     curr_mask := 0
-    readreg(SLAVE_XLG, core#PWR_MGMT_2, 1, @curr_mask)
+    readreg(core#PWR_MGMT_2, 1, @curr_mask)
     case xyz_mask
         %000..%111:
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZG) << core#FLD_DISABLE_XYZG
@@ -234,12 +234,12 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
             return ((curr_mask >> core#FLD_DISABLE_XYZG) & core#BITS_DISABLE_XYZG) ^ core#DISABLE_INVERT
 
     xyz_mask := ((curr_mask & core#MASK_DISABLE_XYZG) | xyz_mask) & core#PWR_MGMT_2_MASK
-    writereg(SLAVE_XLG, core#PWR_MGMT_2, 1, @xyz_mask)
+    writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
 PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read gyro data
     tmp := $00
-    readreg(SLAVE_XLG, core#GYRO_XOUT_H, 6, @tmp)
+    readreg(core#GYRO_XOUT_H, 6, @tmp)
 
     long[ptr_x] := ~~tmp.word[2]
     long[ptr_y] := ~~tmp.word[1]
@@ -267,7 +267,7 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
 '               Pointers to variables to hold current settings for respective axes
     tmpxyz := 0
     if rw == 0
-        readreg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
+        readreg(core#XG_OFFS_USR, 6, @tmpxyz)
         long[ptr_x] := tmpxyz.word[0]
         long[ptr_y] := tmpxyz.word[1]
         long[ptr_z] := tmpxyz.word[2]
@@ -275,14 +275,14 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmpxyz[2]
         tmpxyz.word[0] := ptr_x
         tmpxyz.word[1] := ptr_y
         tmpxyz.word[2] := ptr_z
-        writereg(SLAVE_XLG, core#XG_OFFS_USR, 6, @tmpxyz)
+        writereg(core#XG_OFFS_USR, 6, @tmpxyz)
 
 PUB GyroScale(dps): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
 '   Any other value polls the chip and returns the current setting
     curr_scl := 0
-    readreg(SLAVE_XLG, core#GYRO_CFG, 1, @curr_scl)
+    readreg(core#GYRO_CFG, 1, @curr_scl)
     case dps
         250, 500, 1000, 2000:
             dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
@@ -292,14 +292,14 @@ PUB GyroScale(dps): curr_scl
             return lookupz(curr_scl: 250, 500, 1000, 2000)
 
     dps := ((curr_scl & core#MASK_GYRO_FS_SEL) | dps) & core#GYRO_CFG_MASK
-    writereg(SLAVE_XLG, core#GYRO_CFG, 1, @dps)
+    writereg(core#GYRO_CFG, 1, @dps)
 
 PUB IntActiveState(state): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
-    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_state)
+    readreg(core#INT_BYPASS_CFG, 1, @curr_state)
     case state
         LOW, HIGH:
             state := state << core#FLD_ACTL
@@ -307,7 +307,7 @@ PUB IntActiveState(state): curr_state
             return (curr_state >> core#FLD_ACTL) & %1
 
     state := ((curr_state & core#MASK_ACTL) | state) & core#INT_BYPASS_CFG_MASK
-    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @state)
+    writereg(core#INT_BYPASS_CFG, 1, @state)
 
 PUB IntClearedBy(method): curr_setting
 ' Select method by which interrupt status may be cleared
@@ -316,7 +316,7 @@ PUB IntClearedBy(method): curr_setting
 '       ANY (1): By any read operation
 '   Any other value polls the chip and returns the current setting
     curr_setting := 0
-    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_setting)
+    readreg(core#INT_BYPASS_CFG, 1, @curr_setting)
     case method
         ANY, READ_INT_FLAG:
             method := method << core#FLD_INT_ANYRD_2CLEAR
@@ -324,7 +324,7 @@ PUB IntClearedBy(method): curr_setting
             return (curr_setting >> core#FLD_INT_ANYRD_2CLEAR) & %1
 
     method := ((curr_setting & core#MASK_INT_ANYRD_2CLEAR) | method) & core#INT_BYPASS_CFG_MASK
-    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @method)
+    writereg(core#INT_BYPASS_CFG, 1, @method)
 
 PUB Interrupt{}: flag
 ' Indicates one or more interrupts have been asserted
@@ -334,7 +334,7 @@ PUB Interrupt{}: flag
 '       INT_FSYNC (8) - FSYNC interrupt occurred
 '       INT_SENSOR_READY (1) - Sensor raw data updated
     flag := 0
-    readreg(SLAVE_XLG, core#INT_STATUS, 1, @flag)
+    readreg(core#INT_STATUS, 1, @flag)
 
 PUB IntLatchEnabled(enable): curr_setting
 ' Latch interrupt pin when interrupt asserted
@@ -343,7 +343,7 @@ PUB IntLatchEnabled(enable): curr_setting
 '       TRUE (-1): Interrupt pin is latched, and must be cleared explicitly
 '   Any other value polls the chip and returns the current setting
     curr_setting := 0
-    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_setting)
+    readreg(core#INT_BYPASS_CFG, 1, @curr_setting)
     case ||(enable)
         0, 1:
             enable := (||(enable) << core#FLD_LATCH_INT_EN)
@@ -351,7 +351,7 @@ PUB IntLatchEnabled(enable): curr_setting
             return ((curr_setting >> core#FLD_LATCH_INT_EN) & %1) == 1
 
     enable := ((curr_setting & core#MASK_LATCH_INT_EN) | enable) & core#INT_BYPASS_CFG_MASK
-    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @enable)
+    writereg(core#INT_BYPASS_CFG, 1, @enable)
 
 PUB IntMask(mask): curr_mask
 ' Allow interrupts to assert INT pin, set by mask, or by ORing together symbols shown below
@@ -366,10 +366,10 @@ PUB IntMask(mask): curr_mask
     case mask & (core#INT_ENABLE_MASK ^ $FF)                                    ' Check the mask param passed to us against the inverse (xor $FF) of the
         0:                                                                      ' allowed bits(INT_ENABLE_MASK). If only allowed bits are set, the result should be 0
             mask &= core#INT_ENABLE_MASK
-            writereg(SLAVE_XLG, core#INT_ENABLE, 1, @mask)
+            writereg(core#INT_ENABLE, 1, @mask)
         other:                                                                  ' and it will be considered valid.
             curr_mask := 0
-            readreg(SLAVE_XLG, core#INT_ENABLE, 1, @curr_mask)
+            readreg(core#INT_ENABLE, 1, @curr_mask)
             return curr_mask & core#INT_ENABLE_MASK
 
 PUB IntOutputType(pp_od): curr_setting
@@ -379,7 +379,7 @@ PUB IntOutputType(pp_od): curr_setting
 '       INT_OD (1): Open-drain
 '   Any other value polls the chip and returns the current setting
     curr_setting := 0
-    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @curr_setting)
+    readreg(core#INT_BYPASS_CFG, 1, @curr_setting)
     case pp_od
         INT_PP, INT_OD:
             pp_od := pp_od << core#FLD_OPEN
@@ -387,14 +387,14 @@ PUB IntOutputType(pp_od): curr_setting
             return (curr_setting >> core#FLD_OPEN) & %1
 
     pp_od := ((curr_setting & core#MASK_OPEN) | pp_od) & core#INT_BYPASS_CFG_MASK
-    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @pp_od)
+    writereg(core#INT_BYPASS_CFG, 1, @pp_od)
 
 PUB MagADCRes(bits): curr_res
 ' Set magnetometer ADC resolution, in bits
 '   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
     curr_res := 0
-    readreg(SLAVE_MAG, core#CNTL1, 1, @curr_res)
+    readreg(core#CNTL1, 1, @curr_res)
     case bits
         14, 16:
             bits := lookdownz(bits: 14, 16) << core#FLD_BIT
@@ -403,12 +403,12 @@ PUB MagADCRes(bits): curr_res
             return lookupz(curr_res: 14, 16)
 
     bits := ((curr_res & core#MASK_BIT) | bits) & core#CNTL1_MASK
-    writereg(SLAVE_MAG, core#CNTL1, 1, @bits)
+    writereg(core#CNTL1, 1, @bits)
 
 PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read Magnetometer data
     tmp := $00
-    readreg(SLAVE_MAG, core#HXL, 7, @tmp)                   ' Extra read is for the status register (required)
+    readreg(core#HXL, 7, @tmp)                              ' Read 6 magnetometer data bytes, plus an extra (required) read of the status register
 
     long[ptr_x] := ~~tmp.word[X_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
     long[ptr_y] := ~~tmp.word[Y_AXIS] * ((((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2)) / 128) + 1_000)
@@ -418,7 +418,7 @@ PUB MagDataOverrun{}: flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
     flag := 0
-    readreg(SLAVE_MAG, core#ST1, 1, @flag)
+    readreg(core#ST1, 1, @flag)
     return ((flag >> core#FLD_DOR) & %1) == 1
 
 PUB MagDataRate(Hz)
@@ -442,7 +442,7 @@ PUB MagDataReady{}: flag
 ' Flag indicating new magnetometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     flag := 0
-    readreg(SLAVE_MAG, core#ST1, 1, @flag)
+    readreg(core#ST1, 1, @flag)
     return (flag & %1) == 1
 
 PUB MagGauss(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
@@ -466,7 +466,7 @@ PUB MagOverflow{}: flag
 '   NOTE: If this flag is TRUE, measurement data should not be trusted
 '   NOTE: This bit self-clears when the next measurement starts
     flag := 0
-    readreg(SLAVE_MAG, core#ST2, 1, @flag)
+    readreg(core#ST2, 1, @flag)
     return ((flag >> core#FLD_HOFL) & %1) == 1
 
 PUB MagScale(scale): curr_scl ' XXX PRELIMINARY
@@ -487,7 +487,7 @@ PUB MagSelfTestEnabled(state): curr_state
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
     curr_state := 0
-    readreg(SLAVE_MAG, core#ASTC, 1, @curr_state)
+    readreg(core#ASTC, 1, @curr_state)
     case ||(state)
         0, 1:
             state := (||(state) << core#FLD_SELF) & core#ASTC_MASK
@@ -495,12 +495,12 @@ PUB MagSelfTestEnabled(state): curr_state
             return ((curr_state >> core#FLD_SELF) & %1) == 1
 
     state := (curr_state & core#MASK_SELF) | state
-    writereg(SLAVE_MAG, core#ASTC, 1, @state)
+    writereg(core#ASTC, 1, @state)
 
 PUB MagSoftReset{} | tmp
 ' Perform soft-reset of magnetometer: initialize all registers
     tmp := %1 & core#CNTL2_MASK
-    writereg(SLAVE_MAG, core#CNTL2, 1, @tmp)
+    writereg(core#CNTL2, 1, @tmp)
 
 PUB MeasureMag{}
 ' Perform magnetometer measurement
@@ -518,19 +518,19 @@ PUB MagOpMode(mode): curr_mode
 '       FUSEACCESS (15): Fuse ROM access mode
 '   Any other value polls the chip and returns the current setting
     curr_mode := 0
-    readreg(SLAVE_MAG, core#CNTL1, 1, @curr_mode)
+    readreg(core#CNTL1, 1, @curr_mode)
     case mode
         POWERDOWN, SINGLE, CONT8, CONT100, EXT_TRIG, SELFTEST, FUSEACCESS:
         other:
             return curr_mode & core#BITS_MODE
 
     mode := ((curr_mode & core#MASK_MODE) | mode) & core#CNTL1_MASK
-    writereg(SLAVE_MAG, core#CNTL1, 1, @mode)
+    writereg(core#CNTL1, 1, @mode)
 
 PUB ReadMagAdj{}
 ' Read magnetometer factory sensitivity adjustment values
     magopmode(FUSEACCESS)
-    readreg(SLAVE_MAG, core#ASAX, 3, @_mag_sens_adj)
+    readreg(core#ASAX, 3, @_mag_sens_adj)
     magopmode(CONT100)
 
 PUB Reset{}
@@ -541,7 +541,7 @@ PUB Reset{}
 PUB Temperature{}: temp
 ' Read temperature, in hundredths of a degree
     temp := 0
-    readreg(SLAVE_XLG, core#TEMP_OUT_H, 2, @temp)
+    readreg(core#TEMP_OUT_H, 2, @temp)
     case _temp_scale
         F:
         other:
@@ -562,75 +562,65 @@ PUB TempScale(scale)
 PUB XLGDataReady{}: flag
 ' Flag indicating new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    readreg(SLAVE_XLG, core#INT_STATUS, 1, @flag)
+    readreg(core#INT_STATUS, 1, @flag)
     return (flag & %1) == 1
 
 PUB XLGSoftReset{} | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
     tmp := 1 << core#FLD_H_RESET
-    writereg(SLAVE_XLG, core#PWR_MGMT_1, 1, @tmp)
+    writereg(core#PWR_MGMT_1, 1, @tmp)
 
 PRI disableI2CMaster{} | tmp
 
     tmp := 0
-    readreg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    readreg(core#INT_BYPASS_CFG, 1, @tmp)
     tmp &= core#MASK_BYPASS_EN
     tmp := (tmp | 1 << core#FLD_BYPASS_EN)
-    writereg(SLAVE_XLG, core#INT_BYPASS_CFG, 1, @tmp)
+    writereg(core#INT_BYPASS_CFG, 1, @tmp)
 
-PRI readReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
-'' Read num_bytes from the slave device into the address stored in buff_addr
-    case reg_nr                                             ' Basic register validation
-        $00..$02, $09..$3A, $6A..$75:
-            cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg_nr
+PRI readReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
+' Read nr_bytes from the slave device buff_addr
+    case reg_nr                                             ' Basic register validation (device ID is embedded in the upper byte of each register symbol
+        core#SELF_TEST_X_GYRO..core#SELF_TEST_Z_GYRO, core#SELF_TEST_X_ACCEL..core#SELF_TEST_Z_ACCEL, core#SMPLRT_DIV..core#WOM_THR, core#FIFO_EN..core#INT_ENABLE, core#INT_STATUS, core#EXT_SENS_DATA_00..core#EXT_SENS_DATA_23, core#I2C_SLV0_DO..core#USER_CTRL, core#PWR_MGMT_2, core#FIFO_COUNTH..core#WHO_AM_I, core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, core#GYRO_XOUT_H..core#GYRO_ZOUT_L, core#TEMP_OUT_H:
+            cmd_packet.byte[0] := SLAVE_XLG_WR              ' Accel/Gyro regs
+            cmd_packet.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
             i2c.start{}
-            i2c.write (slave_id|1)
-            i2c.rd_block (buff_addr, nr_bytes, TRUE)
-            i2c.stop{}
-        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, core#GYRO_XOUT_H..core#GYRO_ZOUT_L, core#TEMP_OUT_H:
-            cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg_nr
-            i2c.start{}
-            i2c.wr_block (@cmd_packet, 2)
-            i2c.start{}
-            i2c.write (slave_id|1)
+            i2c.write (SLAVE_XLG_RD)
             repeat tmp from nr_bytes-1 to 0
                 byte[buff_addr][tmp] := i2c.read(tmp == 0)
             i2c.stop{}
-        core#HXL..core#HZH:
-            cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg_nr
+        core#HXL, core#HYL, core#HZL, core#WIA..core#ASTC, core#I2CDIS..core#ASAZ:
+            cmd_packet.byte[0] := SLAVE_MAG_WR              ' Mag regs
+            cmd_packet.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
             i2c.start{}
-            i2c.write (slave_id|1)
-            repeat tmp from 0 to nr_bytes-1
+            i2c.write (SLAVE_MAG_RD)
+            repeat tmp from 0 to nr_bytes-1                 ' Read LSB to MSB (* relevant only to multi-byte registers)
                 byte[buff_addr][tmp] := i2c.read(tmp == nr_bytes-1)
             i2c.stop{}
         other:
             return
 
-PRI writeReg(slave_id, reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
-'' Write num_bytes to the slave device from the address stored in buff_addr
-    case reg_nr                                             ' Basic register validation
-        core#SELF_TEST_X_GYRO..core#SELF_TEST_Z_GYRO, core#SELF_TEST_X_ACCEL..core#SELF_TEST_Z_ACCEL, core#SMPLRT_DIV..core#WOM_THR, core#FIFO_EN..core#I2C_SLV4_CTRL, core#INT_BYPASS_CFG, core#INT_ENABLE, core#I2C_SLV0_DO..core#PWR_MGMT_2, core#FIFO_COUNTH..core#FIFO_R_W:
-            cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg_nr
+PRI writeReg(reg_nr, nr_bytes, buff_addr) | cmd_packet, tmp
+' Write nr_bytes to the slave device from buff_addr
+    case reg_nr                                             ' Basic register validation (device ID is embedded in the upper byte of each register symbol
+        core#SELF_TEST_X_GYRO..core#SELF_TEST_Z_GYRO, core#SELF_TEST_X_ACCEL..core#SELF_TEST_Z_ACCEL, core#SMPLRT_DIV..core#WOM_THR, core#FIFO_EN..core#I2C_SLV4_CTRL, core#INT_BYPASS_CFG, core#INT_ENABLE, core#I2C_SLV0_DO..core#PWR_MGMT_2, core#FIFO_COUNTH..core#FIFO_R_W, core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H:
+            cmd_packet.byte[0] := SLAVE_XLG_WR              ' Accel/Gyro regs
+            cmd_packet.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wr_block (@cmd_packet, 2)
-            repeat tmp from 0 to nr_bytes-1
+            repeat tmp from 0 to nr_bytes-1                 ' Write LSB to MSB (* relevant only to multi-byte registers)
                 i2c.write (byte[buff_addr][tmp])
             i2c.stop{}
-        core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H:
-            cmd_packet.byte[0] := slave_id
-            cmd_packet.byte[1] := reg_nr
+        core#CNTL1..core#ASTC, core#I2CDIS:
+            cmd_packet.byte[0] := SLAVE_MAG_WR              ' Mag regs
+            cmd_packet.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wr_block(@cmd_packet, 2)
-            repeat tmp from nr_bytes-1 to 0
-                i2c.write (byte[buff_addr][tmp])
+            i2c.write (byte[buff_addr][0])
             i2c.stop{}
         other:
             return

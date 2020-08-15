@@ -5,7 +5,7 @@
     Description: Low-level constants
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 13, 2020
+    Updated Aug 15, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -22,22 +22,22 @@ CON
     TREGRW                      = 100               ' ms
 
 ' Accelerometer / Gyroscope registers
-    SELF_TEST_X_GYRO            = $00
-    SELF_TEST_Y_GYRO            = $01
-    SELF_TEST_Z_GYRO            = $02
-    SELF_TEST_X_ACCEL           = $0D
-    SELF_TEST_Y_ACCEL           = $0E
-    SELF_TEST_Z_ACCEL           = $0F
+    SELF_TEST_X_GYRO            = $7100
+    SELF_TEST_Y_GYRO            = $7101
+    SELF_TEST_Z_GYRO            = $7102
+    SELF_TEST_X_ACCEL           = $710D
+    SELF_TEST_Y_ACCEL           = $710E
+    SELF_TEST_Z_ACCEL           = $710F
 
-    XG_OFFS_USR                 = $13                       '..$14 (LSB)
-    YG_OFFS_USR                 = $15                       '..$16 (LSB)
-    ZG_OFFS_USR                 = $17                       '..$18 (LSB
+    XG_OFFS_USR                 = $7113                       '..$14 (LSB)
+    YG_OFFS_USR                 = $7115                       '..$16 (LSB)
+    ZG_OFFS_USR                 = $7117                       '..$18 (LSB
 
-    SMPLRT_DIV                  = $19
+    SMPLRT_DIV                  = $7119
 
-    CONFIG                      = $1A
+    CONFIG                      = $711A
 
-    GYRO_CFG                    = $1B
+    GYRO_CFG                    = $711B
     GYRO_CFG_MASK               = $FB
         FLD_XGYRO_CTEN          = 7
         FLD_YGYRO_CTEN          = 6
@@ -52,7 +52,7 @@ CON
         MASK_GYRO_FS_SEL        = GYRO_CFG_MASK ^ (BITS_GYRO_FS_SEL << FLD_GYRO_FS_SEL)
         MASK_FCHOICE_B          = GYRO_CFG_MASK ^ (BITS_FCHOICE_B << FLD_FCHOICE_B)
 
-    ACCEL_CFG                   = $1C
+    ACCEL_CFG                   = $711C
     ACCEL_CFG_MASK              = $F8
         FLD_AX_ST_EN            = 7
         FLD_AY_ST_EN            = 6
@@ -64,35 +64,35 @@ CON
         MASK_AZ_ST_EN           = ACCEL_CFG_MASK ^ (1 << FLD_AZ_ST_EN)
         MASK_ACCEL_FS_SEL       = ACCEL_CFG_MASK ^ (BITS_ACCEL_FS_SEL << FLD_ACCEL_FS_SEL)
 
-    ACCEL_CFG2                  = $1D
+    ACCEL_CFG2                  = $711D
 
-    LP_ACCEL_ODR                = $1E
+    LP_ACCEL_ODR                = $711E
 
-    WOM_THR                     = $1F
+    WOM_THR                     = $711F
 
-    FIFO_EN                     = $23
+    FIFO_EN                     = $7123
 
-    I2C_MST_CTRL                = $24
-    I2C_SLV0_ADDR               = $25
-    I2C_SLV0_REG                = $26
-    I2C_SLV0_CTRL               = $27
-    I2C_SLV1_ADDR               = $28
-    I2C_SLV1_REG                = $29
-    I2C_SLV1_CTRL               = $2A
-    I2C_SLV2_ADDR               = $2B
-    I2C_SLV2_REG                = $2C
-    I2C_SLV2_CTRL               = $2D
-    I2C_SLV3_ADDR               = $2E
-    I2C_SLV3_REG                = $2F
-    I2C_SLV3_CTRL               = $30
-    I2C_SLV4_ADDR               = $31
-    I2C_SLV4_REG                = $32
-    I2C_SLV4_DO                 = $33
-    I2C_SLV4_CTRL               = $34
-    I2C_SLV4_DI                 = $35
-    I2C_MST_STATUS              = $36
+    I2C_MST_CTRL                = $7124
+    I2C_SLV0_ADDR               = $7125
+    I2C_SLV0_REG                = $7126
+    I2C_SLV0_CTRL               = $7127
+    I2C_SLV1_ADDR               = $7128
+    I2C_SLV1_REG                = $7129
+    I2C_SLV1_CTRL               = $712A
+    I2C_SLV2_ADDR               = $712B
+    I2C_SLV2_REG                = $712C
+    I2C_SLV2_CTRL               = $712D
+    I2C_SLV3_ADDR               = $712E
+    I2C_SLV3_REG                = $712F
+    I2C_SLV3_CTRL               = $7130
+    I2C_SLV4_ADDR               = $7131
+    I2C_SLV4_REG                = $7132
+    I2C_SLV4_DO                 = $7133
+    I2C_SLV4_CTRL               = $7134
+    I2C_SLV4_DI                 = $7135
+    I2C_MST_STATUS              = $7136
 
-    INT_BYPASS_CFG              = $37
+    INT_BYPASS_CFG              = $7137
     INT_BYPASS_CFG_MASK         = $FE
         FLD_BYPASS_EN           = 1
         FLD_FSYNC_INT_MODE_EN   = 2
@@ -109,7 +109,7 @@ CON
         MASK_OPEN               = INT_BYPASS_CFG_MASK ^ (1 << FLD_OPEN)
         MASK_ACTL               = INT_BYPASS_CFG_MASK ^ (1 << FLD_ACTL)
 
-    INT_ENABLE                  = $38
+    INT_ENABLE                  = $7138
     INT_ENABLE_MASK             = $59
         FLD_WOM_EN              = 6
         FLD_FIFO_OVERFLOW_EN    = 4
@@ -120,67 +120,67 @@ CON
         MASK_FSYNC_INT_EN       = INT_ENABLE_MASK ^ (1 << FLD_FSYNC_INT_EN)
         MASK_RAW_RDY_EN         = INT_ENABLE_MASK ^ (1 << FLD_RAW_RDY_EN)
 
-    INT_STATUS                  = $3A
+    INT_STATUS                  = $713A
     INT_STATUS_MASK             = $59
         FLD_WOM_INT             = 6
         FLD_FIFO_OVERFLOW_INT   = 4
         FLD_FSYNC_INT           = 3
         FLD_RAW_DATA_RDY_INT    = 0
 
-    ACCEL_XOUT_H                = $3B
-    ACCEL_XOUT_L                = $3C
-    ACCEL_YOUT_H                = $3D
-    ACCEL_YOUT_L                = $3E
-    ACCEL_ZOUT_H                = $3F
-    ACCEL_ZOUT_L                = $40
+    ACCEL_XOUT_H                = $713B
+    ACCEL_XOUT_L                = $713C
+    ACCEL_YOUT_H                = $713D
+    ACCEL_YOUT_L                = $713E
+    ACCEL_ZOUT_H                = $713F
+    ACCEL_ZOUT_L                = $7140
 
-    TEMP_OUT_H                  = $41
-    TEMP_OUT_L                  = $42
+    TEMP_OUT_H                  = $7141
+    TEMP_OUT_L                  = $7142
 
-    GYRO_XOUT_H                 = $43
-    GYRO_XOUT_L                 = $44
-    GYRO_YOUT_H                 = $45
-    GYRO_YOUT_L                 = $46
-    GYRO_ZOUT_H                 = $47
-    GYRO_ZOUT_L                 = $48
+    GYRO_XOUT_H                 = $7143
+    GYRO_XOUT_L                 = $7144
+    GYRO_YOUT_H                 = $7145
+    GYRO_YOUT_L                 = $7146
+    GYRO_ZOUT_H                 = $7147
+    GYRO_ZOUT_L                 = $7148
 
-    EXT_SENS_DATA_00            = $49
-    EXT_SENS_DATA_01            = $4A
-    EXT_SENS_DATA_02            = $4B
-    EXT_SENS_DATA_03            = $4C
-    EXT_SENS_DATA_04            = $4D
-    EXT_SENS_DATA_05            = $4E
-    EXT_SENS_DATA_06            = $4F
-    EXT_SENS_DATA_07            = $50
-    EXT_SENS_DATA_08            = $51
-    EXT_SENS_DATA_09            = $52
-    EXT_SENS_DATA_10            = $53
-    EXT_SENS_DATA_11            = $54
-    EXT_SENS_DATA_12            = $55
-    EXT_SENS_DATA_13            = $56
-    EXT_SENS_DATA_14            = $57
-    EXT_SENS_DATA_15            = $58
-    EXT_SENS_DATA_16            = $59
-    EXT_SENS_DATA_17            = $5A
-    EXT_SENS_DATA_18            = $5B
-    EXT_SENS_DATA_19            = $5C
-    EXT_SENS_DATA_20            = $5D
-    EXT_SENS_DATA_21            = $5E
-    EXT_SENS_DATA_22            = $5F
-    EXT_SENS_DATA_23            = $60
+    EXT_SENS_DATA_00            = $7149
+    EXT_SENS_DATA_01            = $714A
+    EXT_SENS_DATA_02            = $714B
+    EXT_SENS_DATA_03            = $714C
+    EXT_SENS_DATA_04            = $714D
+    EXT_SENS_DATA_05            = $714E
+    EXT_SENS_DATA_06            = $714F
+    EXT_SENS_DATA_07            = $7150
+    EXT_SENS_DATA_08            = $7151
+    EXT_SENS_DATA_09            = $7152
+    EXT_SENS_DATA_10            = $7153
+    EXT_SENS_DATA_11            = $7154
+    EXT_SENS_DATA_12            = $7155
+    EXT_SENS_DATA_13            = $7156
+    EXT_SENS_DATA_14            = $7157
+    EXT_SENS_DATA_15            = $7158
+    EXT_SENS_DATA_16            = $7159
+    EXT_SENS_DATA_17            = $715A
+    EXT_SENS_DATA_18            = $715B
+    EXT_SENS_DATA_19            = $715C
+    EXT_SENS_DATA_20            = $715D
+    EXT_SENS_DATA_21            = $715E
+    EXT_SENS_DATA_22            = $715F
+    EXT_SENS_DATA_23            = $7160
 
-    I2C_SLV0_DO                 = $63
-    I2C_SLV1_DO                 = $64
-    I2C_SLV2_DO                 = $65
-    I2C_SLV3_DO                 = $66
+    I2C_SLV0_DO                 = $7163
+    I2C_SLV1_DO                 = $7164
+    I2C_SLV2_DO                 = $7165
+    I2C_SLV3_DO                 = $7166
 
-    I2C_MST_DELAY_CTRL          = $67
+    I2C_MST_DELAY_CTRL          = $7167
 
-    SIGNAL_PATH_RESET           = $68
+    SIGNAL_PATH_RESET           = $7168
 
-    MOT_DETECT_CTRL             = $69
+    MOT_DETECT_CTRL             = $7169
 
-    USER_CTRL                   = $6A
+    USER_CTRL                   = $716A
     USER_CTRL_MASK              = $77
         FLD_SIG_COND_RST        = 0
         FLD_I2C_MST_RST         = 1
@@ -200,7 +200,7 @@ CON
         FLD_H_RESET             = 7
         MASK_H_RESET            = PWR_MGMT_1_MASK ^ (1 << FLD_H_RESET)
 
-    PWR_MGMT_2                  = $6C
+    PWR_MGMT_2                  = $716C
     PWR_MGMT_2_MASK             = $3F
         FLD_DISABLE_XYZA        = 3
         FLD_DISABLE_XYZG        = 0
@@ -210,41 +210,41 @@ CON
         MASK_DISABLE_XYZG       = PWR_MGMT_2_MASK ^ (BITS_DISABLE_XYZG << FLD_DISABLE_XYZG)
         DISABLE_INVERT          = %111
 
-    FIFO_COUNTH                 = $72
-    FIFO_COUNTL                 = $73
-    FIFO_R_W                    = $74
+    FIFO_COUNTH                 = $7172
+    FIFO_COUNTL                 = $7173
+    FIFO_R_W                    = $7174
 
-    WHO_AM_I                    = $75
+    WHO_AM_I                    = $7175
         WHO_AM_I_RESP           = $71
 
-    XA_OFFS_H                   = $77                       ' ..$78 (LSB)
-    YA_OFFS_H                   = $7A                       ' ..$7B (LSB)
-    ZA_OFFS_H                   = $7D                       ' ..$7E (LSB)
+    XA_OFFS_H                   = $7177                       ' ..$78 (LSB)
+    YA_OFFS_H                   = $717A                       ' ..$7B (LSB)
+    ZA_OFFS_H                   = $717D                       ' ..$7E (LSB)
 
 ' Magnetometer registers
-    WIA                         = $00
+    WIA                         = $4800
         WIA_RESP                = $48
 
-    INFO                        = $01
+    INFO                        = $4801
 
-    ST1                         = $02
+    ST1                         = $4802
     ST1_MASK                    = $03
         FLD_DOR                 = 1
         FLD_DRDY                = 0
 
-    HXL                         = $03
-    HXH                         = $04
-    HYL                         = $05
-    HYH                         = $06
-    HZL                         = $07
-    HZH                         = $08
+    HXL                         = $4803
+    HXH                         = $4804
+    HYL                         = $4805
+    HYH                         = $4806
+    HZL                         = $4807
+    HZH                         = $4808
 
-    ST2                         = $09
+    ST2                         = $4809
     ST2_MASK                    = $18
         FLD_BITM                = 4
         FLD_HOFL                = 3
 
-    CNTL1                       = $0A
+    CNTL1                       = $480A
     CNTL1_MASK                  = $1F
         FLD_BIT                 = 4
         FLD_MODE                = 0
@@ -252,13 +252,13 @@ CON
         MASK_BIT                = CNTL1_MASK ^ (1 << FLD_BIT)
         MASK_MODE               = CNTL1_MASK ^ (BITS_MODE << FLD_MODE)
 
-    CNTL2                       = $0B
+    CNTL2                       = $480B
     CNTL2_MASK                  = $01
         FLD_SRST                = 0
 
 ' RESERVED - $0B
 
-    ASTC                        = $0C
+    ASTC                        = $480C
     ASTC_MASK                   = $40
         FLD_SELF                = 6
         MASK_SELF               = ASTC_MASK ^ (1 << FLD_SELF)
@@ -266,11 +266,11 @@ CON
 ' TEST 1 - $0D
 ' TEST 2 - $0E
 
-    I2CDIS                      = $0F
+    I2CDIS                      = $480F
 
-    ASAX                        = $10
-    ASAY                        = $11
-    ASAZ                        = $12
+    ASAX                        = $4810
+    ASAY                        = $4811
+    ASAZ                        = $4812
 
 PUB Null
 '' This is not a top-level object
