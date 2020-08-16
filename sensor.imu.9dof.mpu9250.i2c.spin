@@ -63,6 +63,11 @@ CON
     C                   = 0
     F                   = 1
 
+' FIFO modes
+    BYPASS              = 0
+    STREAM              = 1
+    FIFO                = 2
+
 VAR
 
     long _mag_bias[3]
@@ -232,6 +237,29 @@ PUB DeviceID{}: id
     id := 0
     readreg(core#WIA, 1, @id.byte[0])
     readreg(core#WHO_AM_I, 1, @id.byte[1])
+
+PUB FIFOMode(mode): curr_mode
+' Set FIFO mode
+'   Valid values:
+'       BYPASS (0): FIFO disabled
+'       STREAM (1): FIFO enabled; when full, new data overwrites old data
+'       FIFO (2): FIFO enabled; when full, no new data will be written to FIFO
+'   Any other value polls the chip and returns the current setting
+'   NOTE: If no data sources are set using FIFOSource(), the current mode returned will be BYPASS (0), regardless of what the mode was previously set to
+    curr_mode := 0
+    readreg(core#CONFIG, 1, @curr_mode)
+    case mode
+        BYPASS:                                             ' If bypassing the FIFO, turn
+            fifosource(%00000000)                           '   off all FIFO data collection
+            return
+        STREAM, FIFO:
+            mode := lookdownz(mode: STREAM, FIFO) << core#FIFO_MODE
+        other:
+            curr_mode := (curr_mode >> core#FIFO_MODE) & 1
+            if fifosource(-2)                               ' If there's a mask set with FIFOSource(), return
+                return lookupz(curr_mode: STREAM, FIFO)     '   either STREAM or FIFO as the current mode
+            else
+                return BYPASS                               ' If not, anything besides 0 (BYPASS) doesn't really matter or make sense
 
 PUB FIFOSource(mask): curr_mask
 ' Set FIFO source data, as a bitmask

@@ -36,6 +36,15 @@ CON
     SMPLRT_DIV                  = $7119
 
     CONFIG                      = $711A
+    CONFIG_MASK                 = $7F
+        FIFO_MODE               = 6
+        EXT_SYNC_SET            = 3
+        DLPF_CFG                = 0
+        EXT_SYNC_SET_BITS       = %111
+        DLPF_CFG_BITS           = %111
+        FIFO_MODE_MASK          = (1 << FIFO_MODE) ^ CONFIG_MASK
+        EXT_SYNC_SET_MASK       = (EXT_SYNC_SET_BITS << EXT_SYNC_SET) ^ CONFIG_MASK
+        DLPF_CFG_MASK           = (DLPF_CFG_BITS << DLPF_CFG) ^ CONFIG_MASK
 
     GYRO_CFG                    = $711B
     GYRO_CFG_MASK               = $FB
