@@ -732,6 +732,22 @@ PUB XLGDataReady{}: flag
     readreg(core#INT_STATUS, 1, @flag)
     return (flag & %1) == 1
 
+PUB XLGLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bits
+' Set accel/gyro/temp sensor low-pass filter cutoff frequency, in Hz
+'   Valid values: 5, 10, 20, 42, 98, 188
+'   Any other value polls the chip and returns the current setting
+    case cutoff_Hz
+        5, 10, 20, 42, 98, 188:
+            cutoff_Hz := lookdown(cutoff_Hz: 188, 98, 42, 20, 10, 5)
+            lpf_bypass_bits := 0
+            writereg(core#GYRO_CFG, 1, @lpf_bypass_bits)
+            writereg(core#ACCEL_CFG2, 1, @cutoff_Hz)
+            writereg(core#CONFIG, 1, @cutoff_Hz)
+        other:
+            curr_setting := 0
+            readreg(core#ACCEL_CFG2, 1, @curr_setting)
+            return lookup(curr_setting & core#A_DLPFCFG_BITS: 188, 98, 42, 20, 10, 5)
+
 PUB XLGSoftReset{} | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
     tmp := 1 << core#FLD_H_RESET
