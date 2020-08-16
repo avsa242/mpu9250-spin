@@ -74,6 +74,12 @@ CON
         MASK_ACCEL_FS_SEL       = ACCEL_CFG_MASK ^ (BITS_ACCEL_FS_SEL << FLD_ACCEL_FS_SEL)
 
     ACCEL_CFG2                  = $711D
+    ACCEL_CFG2_MASK             = $0F
+        ACCEL_FCHOICE_B         = 3
+        A_DLPFCFG               = 0
+        A_DLPFCFG_BITS          = %111
+        ACCEL_FCHOICE_B_MASK    = (1 << ACCEL_FCHOICE_B) ^ ACCEL_CFG2_MASK
+        A_DLPFCFG_MASK          = (A_DLPFCFG_BITS << A_DLPFCFG) ^ ACCEL_CFG2_MASK
 
     LP_ACCEL_ODR                = $711E
 

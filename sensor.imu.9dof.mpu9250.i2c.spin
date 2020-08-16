@@ -175,6 +175,12 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
+PUB AccelDataRate(Hz): curr_setting
+' Set accelerometer output data rate, in Hz
+'   Valid values: 4..1000
+'   Any other value polls the chip and returns the current setting
+    curr_setting := xlgdatarate(Hz)
+
 PUB AccelDataReady{}: flag
 ' Flag indicating new accelerometer data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
@@ -374,6 +380,12 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_x] := ~~tmp.word[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
+
+PUB GyroDataRate(Hz): curr_setting
+' Set gyroscope output data rate, in Hz
+'   Valid values: 4..1000
+'   Any other value polls the chip and returns the current setting
+    curr_setting := xlgdatarate(Hz)
 
 PUB GyroDataReady{}: flag
 ' Flag indicating new gyroscope data available
@@ -674,6 +686,12 @@ PUB Reset{}
     magsoftreset{}
     xlgsoftreset{}
 
+PUB TempDataRate(Hz): curr_setting
+' Set temperature output data rate, in Hz
+'   Valid values: 4..1000
+'   Any other value polls the chip and returns the current setting
+    curr_setting := xlgdatarate(Hz)
+
 PUB Temperature{}: temp
 ' Read temperature, in hundredths of a degree
     temp := 0
@@ -694,6 +712,19 @@ PUB TempScale(scale)
             _temp_scale := scale
         other:
             return _temp_scale
+
+PUB XLGDataRate(Hz): curr_setting
+' Set accelerometer/gyro/temp sensor output data rate, in Hz
+'   Valid values: 4..1000
+'   Any other value polls the chip and returns the current setting
+    case Hz
+        4..1000:
+            Hz := (1000 / Hz) - 1
+            writereg(core#SMPLRT_DIV, 1, @Hz)
+        other:
+            curr_setting := 0
+            readreg(core#SMPLRT_DIV, 1, @curr_setting)
+            return 1000 / (curr_setting + 1)
 
 PUB XLGDataReady{}: flag
 ' Flag indicating new gyroscope/accelerometer data is ready to be read
