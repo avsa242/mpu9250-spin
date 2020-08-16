@@ -283,6 +283,11 @@ PUB FIFOSource(mask): curr_mask
             readreg(core#FIFO_EN, 1, @curr_mask)
             return
 
+PUB FIFOUnreadSamples{}: nr_samples
+' Number of unread samples stored in FIFO
+'   Returns: unsigned 13bit
+    readreg(core#FIFO_COUNTH, 2, @nr_samples)
+
 PUB FSYNCActiveState(state): curr_state
 ' Set FSYNC pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
