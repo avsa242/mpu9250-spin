@@ -253,6 +253,13 @@ PUB FIFOEnabled(state): curr_state
         other:
             return ((curr_state >> core#FLD_FIFO_EN) & 1) == 1
 
+PUB FIFOFull{}: flag
+' Flag indicating FIFO is full
+'   Returns: TRUE (-1) if FIFO is full, FALSE (0) otherwise
+'   NOTE: If this flag is set, the oldest data has already been dropped from the FIFO
+    readreg(core#INT_STATUS, 1, @flag)
+    return ((flag >> core#FLD_FIFO_OVERFLOW_INT) & 1) == 1
+
 PUB FIFOMode(mode): curr_mode
 ' Set FIFO mode
 '   Valid values:
@@ -462,7 +469,7 @@ PUB IntMask(mask): curr_mask
 '       Bits: %x6x43xx0 (bit positions marked 'x' aren't supported by the device; setting any of them to '1' will be considered invalid and will query the current setting, instead)
 '               Function                                Symbol              Value
 '           6: Enable interrupt for wake on motion      INT_WAKE_ON_MOTION (64)
-'           4: Enable interrupt for FIFO overflow       INT_FIFO_OVERFLOW) (16)
+'           4: Enable interrupt for FIFO overflow       INT_FIFO_OVERFLOW  (16)
 '           3: Enable FSYNC interrupt                   INT_FSYNC           (8)
 '           1: Enable raw Sensor Data Ready interrupt   INT_SENSOR_READY    (1)
 '   Any other value polls the chip and returns the current setting
