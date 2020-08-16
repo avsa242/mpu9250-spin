@@ -238,6 +238,21 @@ PUB DeviceID{}: id
     readreg(core#WIA, 1, @id.byte[0])
     readreg(core#WHO_AM_I, 1, @id.byte[1])
 
+PUB FIFOEnabled(state): curr_state
+' Enable the FIFO
+'   Valid values: TRUE (-1 or 1), FALSE (0)
+'   Any other value polls the chip and returns the current setting
+'   NOTE: This disables the interface to the FIFO, but the chip will still write data to it, if FIFO data sources are defined with FIFOSource()
+    curr_state := 0
+    readreg(core#USER_CTRL, 1, @curr_state)
+    case ||(state)
+        0, 1:
+            state := ||(state) << core#FLD_FIFO_EN
+            state := ((curr_state & core#MASK_FIFO_EN) | state) & core#USER_CTRL_MASK
+            writereg(core#USER_CTRL, 1, @state)
+        other:
+            return ((curr_state >> core#FLD_FIFO_EN) & 1) == 1
+
 PUB FIFOMode(mode): curr_mode
 ' Set FIFO mode
 '   Valid values:
