@@ -129,7 +129,7 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
     curr_mask := 0
     readreg(core#PWR_MGMT_2, 1, @curr_mask)
     case xyz_mask
-        %000..%111:
+        %000..%111:                                         ' We do the XOR below because the logic in the chip is actually the reverse of the method name, i.e., a bit set to 1 _disables_ that axis
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZA) << core#FLD_DISABLE_XYZA
         other:
             return ((curr_mask >> core#FLD_DISABLE_XYZA) & core#BITS_DISABLE_XYZA) ^ core#DISABLE_INVERT
@@ -199,6 +199,26 @@ PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
     long[ptr_y] := (tmpy * _accel_cnts_per_lsb)
     long[ptr_z] := (tmpz * _accel_cnts_per_lsb)
 
+PUB AccelLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bit
+' Set accelerometer output data low-pass filter cutoff frequency, in Hz
+'   Valid values: 5, 10, 20, 42, 98, 188
+'   Any other value polls the chip and returns the current setting
+    curr_setting := lpf_bypass_bit := 0
+    readreg(core#ACCEL_CFG2, 1, curr_setting)
+    case cutoff_Hz
+        0:                                                  ' Disable/bypass the LPF
+            lpf_bypass_bit := (%1 << core#ACCEL_FCHOICE_B)
+        5, 10, 20, 42, 98, 188:
+            cutoff_Hz := lookdown(cutoff_Hz: 188, 98, 42, 20, 10, 5)
+        other:
+            if (curr_setting >> core#ACCEL_FCHOICE_B) & %1  ' The LPF bypass bit is set, so
+                return 0                                    '   return 0 (LPF bypassed/disabled)
+            else
+                return lookup(curr_setting & core#A_DLPFCFG_BITS: 188, 98, 42, 20, 10, 5)
+
+    cutoff_Hz := ((curr_setting & core#ACCEL_FCHOICE_B_MASK) & core#A_DLPFCFG_MASK) | cutoff_Hz | lpf_bypass_bit
+    writereg(core#ACCEL_CFG2, 1, @cutoff_Hz)
+
 PUB AccelScale(g): curr_scl
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
@@ -207,13 +227,13 @@ PUB AccelScale(g): curr_scl
     readreg(core#ACCEL_CFG, 1, @curr_scl)
     case g
         2, 4, 8, 16:
-            g := lookdownz(g: 2, 4, 8, 16) << core#FLD_ACCEL_FS_SEL
-            _accel_cnts_per_lsb := lookupz(g >> core#FLD_ACCEL_FS_SEL: 61, 122, 244, 488)   ' 1/16384, 1/8192, 1/4096, 1/2048 * 1_000_000
+            g := lookdownz(g: 2, 4, 8, 16) << core#ACCEL_FS_SEL
+            _accel_cnts_per_lsb := lookupz(g >> core#ACCEL_FS_SEL: 61, 122, 244, 488)   ' 1/16384, 1/8192, 1/4096, 1/2048 * 1_000_000
         other:
-            curr_scl := (curr_scl >> core#FLD_ACCEL_FS_SEL) & core#BITS_ACCEL_FS_SEL
+            curr_scl := (curr_scl >> core#ACCEL_FS_SEL) & core#ACCEL_FS_SEL_BITS
             return lookupz(curr_scl: 2, 4, 8, 16)
 
-    g := ((curr_scl & core#MASK_ACCEL_FS_SEL) | g) & core#ACCEL_CFG_MASK
+    g := ((curr_scl & core#ACCEL_FS_SEL_MASK) | g) & core#ACCEL_CFG_MASK
     writereg(core#ACCEL_CFG, 1, @g)
 
 PUB CalibrateAccel{}
@@ -247,17 +267,17 @@ PUB ClockSource(src): curr_src
 ' Set sensor clock source
 '   Valid values:
 '       INT20 (0): Internal 20MHz oscillator
-'       AUTO (1): Automatically select best choice (PLL if ready, else internal oscillator)
+'      *AUTO (1): Automatically select best choice (PLL if ready, else internal oscillator)
 '       CLKSTOP (7): Stop clock and hold in reset
     curr_src := 0
-    readreg(core#PWR_MGMT_2, 1, @curr_src)
+    readreg(core#PWR_MGMT_1, 1, @curr_src)
     case src
         INT20, AUTO, CLKSTOP:
         other:
             return curr_src & core#CLKSEL_BITS
 
     src := (curr_src & core#CLKSEL_MASK) | src
-    writereg(core#PWR_MGMT_2, 1, @src)
+    writereg(core#PWR_MGMT_1, 1, @src)
 
 PUB DeviceID{}: id
 ' Read device ID
@@ -361,7 +381,7 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
     curr_mask := 0
     readreg(core#PWR_MGMT_2, 1, @curr_mask)
     case xyz_mask
-        %000..%111:
+        %000..%111:                                         ' We do the XOR below because the logic in the chip is actually the reverse of the method name, i.e., a bit set to 1 _disables_ that axis
             xyz_mask := ((xyz_mask ^ core#DISABLE_INVERT) & core#BITS_DISABLE_XYZG) << core#FLD_DISABLE_XYZG
         other:
             return ((curr_mask >> core#FLD_DISABLE_XYZG) & core#BITS_DISABLE_XYZG) ^ core#DISABLE_INVERT
@@ -420,6 +440,29 @@ PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
     long[gy] := (tmpy * _gyro_cnts_per_lsb)
     long[gz] := (tmpz * _gyro_cnts_per_lsb)
 
+PUB GyroLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bits
+' Set gyroscope output data low-pass filter cutoff frequency, in Hz
+'   Valid values: 5, 10, 20, 42, 98, 188
+'   Any other value polls the chip and returns the current setting
+    curr_setting := lpf_bypass_bits := 0
+    readreg(core#CONFIG, 1, @curr_setting)
+    readreg(core#GYRO_CFG, 1, @lpf_bypass_bits)
+    case cutoff_Hz
+        0:                                                  ' Disable/bypass the LPF
+            lpf_bypass_bits.byte[1] := (%11 << core#FCHOICE_B)  ' Store the new setting into the 2nd byte of the variable
+        5, 10, 20, 42, 98, 188:
+            cutoff_Hz := lookdown(cutoff_Hz: 188, 98, 42, 20, 10, 5)
+        other:
+            if curr_setting & core#FCHOICE_B_BITS <> %00    ' The LPF bypass bit is set, so
+                return 0                                    '   return 0 (LPF bypassed/disabled)
+            else
+                return lookup(curr_setting & core#DLPF_CFG_BITS: 188, 98, 42, 20, 10, 5)
+
+    lpf_bypass_bits := (lpf_bypass_bits.byte[0] & core#DLPF_CFG_MASK) | lpf_bypass_bits.byte[1]
+    cutoff_Hz := (curr_setting & core#DLPF_CFG_MASK) | cutoff_Hz
+    writereg(core#CONFIG, 1, @cutoff_Hz)
+    writereg(core#GYRO_CFG, 1, @lpf_bypass_bits)
+
 PUB GyroScale(dps): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
@@ -428,13 +471,13 @@ PUB GyroScale(dps): curr_scl
     readreg(core#GYRO_CFG, 1, @curr_scl)
     case dps
         250, 500, 1000, 2000:
-            dps := lookdownz(dps: 250, 500, 1000, 2000) << core#FLD_GYRO_FS_SEL
-            _gyro_cnts_per_lsb := lookupz(dps >> core#FLD_GYRO_FS_SEL: 7633, 15_267, 30_487, 60_975)    ' 1/131, 1/65.5, 1/32.8, 1/16.4 * 1_000_000
+            dps := lookdownz(dps: 250, 500, 1000, 2000) << core#GYRO_FS_SEL
+            _gyro_cnts_per_lsb := lookupz(dps >> core#GYRO_FS_SEL: 7633, 15_267, 30_487, 60_975)    ' 1/131, 1/65.5, 1/32.8, 1/16.4 * 1_000_000
         other:
-            curr_scl := (curr_scl >> core#FLD_GYRO_FS_SEL) & core#BITS_GYRO_FS_SEL
+            curr_scl := (curr_scl >> core#GYRO_FS_SEL) & core#GYRO_FS_SEL_BITS
             return lookupz(curr_scl: 250, 500, 1000, 2000)
 
-    dps := ((curr_scl & core#MASK_GYRO_FS_SEL) | dps) & core#GYRO_CFG_MASK
+    dps := ((curr_scl & core#GYRO_FS_SEL_MASK) | dps) & core#GYRO_CFG_MASK
     writereg(core#GYRO_CFG, 1, @dps)
 
 PUB IntActiveState(state): curr_state
@@ -753,21 +796,12 @@ PUB XLGDataReady{}: flag
     readreg(core#INT_STATUS, 1, @flag)
     return (flag & %1) == 1
 
-PUB XLGLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bits
+PUB XLGLowPassFilter(cutoff_Hz): curr_setting
 ' Set accel/gyro/temp sensor low-pass filter cutoff frequency, in Hz
 '   Valid values: 5, 10, 20, 42, 98, 188
-'   Any other value polls the chip and returns the current setting
-    case cutoff_Hz
-        5, 10, 20, 42, 98, 188:
-            cutoff_Hz := lookdown(cutoff_Hz: 188, 98, 42, 20, 10, 5)
-            lpf_bypass_bits := 0
-            writereg(core#GYRO_CFG, 1, @lpf_bypass_bits)
-            writereg(core#ACCEL_CFG2, 1, @cutoff_Hz)
-            writereg(core#CONFIG, 1, @cutoff_Hz)
-        other:
-            curr_setting := 0
-            readreg(core#ACCEL_CFG2, 1, @curr_setting)
-            return lookup(curr_setting & core#A_DLPFCFG_BITS: 188, 98, 42, 20, 10, 5)
+'   Any other value polls the chip and returns the current setting (accel in lower word, gyro in upper word)
+    curr_setting.word[0] := accellowpassfilter(cutoff_Hz)
+    curr_setting.word[1] := gyrolowpassfilter(cutoff_Hz)
 
 PUB XLGSoftReset{} | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
