@@ -204,7 +204,7 @@ PUB AccelLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bit
 '   Valid values: 5, 10, 20, 42, 98, 188
 '   Any other value polls the chip and returns the current setting
     curr_setting := lpf_bypass_bit := 0
-    readreg(core#ACCEL_CFG2, 1, curr_setting)
+    readreg(core#ACCEL_CFG2, 1, @curr_setting)
     case cutoff_Hz
         0:                                                  ' Disable/bypass the LPF
             lpf_bypass_bit := (%1 << core#ACCEL_FCHOICE_B)
@@ -216,7 +216,7 @@ PUB AccelLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bit
             else
                 return lookup(curr_setting & core#A_DLPFCFG_BITS: 188, 98, 42, 20, 10, 5)
 
-    cutoff_Hz := ((curr_setting & core#ACCEL_FCHOICE_B_MASK) & core#A_DLPFCFG_MASK) | cutoff_Hz | lpf_bypass_bit
+    cutoff_Hz := (curr_setting & core#A_DLPFCFG_MASK & core#ACCEL_FCHOICE_B_MASK) | cutoff_Hz | lpf_bypass_bit
     writereg(core#ACCEL_CFG2, 1, @cutoff_Hz)
 
 PUB AccelScale(g): curr_scl
@@ -453,7 +453,7 @@ PUB GyroLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bits
         5, 10, 20, 42, 98, 188:
             cutoff_Hz := lookdown(cutoff_Hz: 188, 98, 42, 20, 10, 5)
         other:
-            if curr_setting & core#FCHOICE_B_BITS <> %00    ' The LPF bypass bit is set, so
+            if lpf_bypass_bits & core#FCHOICE_B_BITS <> %00    ' The LPF bypass bit is set, so
                 return 0                                    '   return 0 (LPF bypassed/disabled)
             else
                 return lookup(curr_setting & core#DLPF_CFG_BITS: 188, 98, 42, 20, 10, 5)
