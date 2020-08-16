@@ -68,6 +68,11 @@ CON
     STREAM              = 1
     FIFO                = 2
 
+' Clock sources
+    INT20               = 0
+    AUTO                = 1
+    CLKSTOP             = 7
+
 VAR
 
     long _mag_bias[3]
@@ -237,6 +242,22 @@ PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, samples, opmode_orig
 
     magbias((magmax[X_AXIS] + magmin[X_AXIS]) / 2, (magmax[Y_AXIS] + magmin[Y_AXIS]) / 2, (magmax[Z_AXIS] + magmin[Z_AXIS]) / 2, W) ' Write the mean of the samples just gathered as new bias offsets
     magopmode(opmode_orig)                                  ' Restore the user's original operating mode
+
+PUB ClockSource(src): curr_src
+' Set sensor clock source
+'   Valid values:
+'       INT20 (0): Internal 20MHz oscillator
+'       AUTO (1): Automatically select best choice (PLL if ready, else internal oscillator)
+'       CLKSTOP (7): Stop clock and hold in reset
+    curr_src := 0
+    readreg(core#PWR_MGMT_2, 1, @curr_src)
+    case src
+        INT20, AUTO, CLKSTOP:
+        other:
+            return curr_src & core#CLKSEL_BITS
+
+    src := (curr_src & core#CLKSEL_MASK) | src
+    writereg(core#PWR_MGMT_2, 1, @src)
 
 PUB DeviceID{}: id
 ' Read device ID
@@ -750,7 +771,7 @@ PUB XLGLowPassFilter(cutoff_Hz): curr_setting | lpf_bypass_bits
 
 PUB XLGSoftReset{} | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
-    tmp := 1 << core#FLD_H_RESET
+    tmp := 1 << core#H_RESET
     writereg(core#PWR_MGMT_1, 1, @tmp)
 
 PRI disableI2CMaster{} | tmp

@@ -212,8 +212,19 @@ CON
 
     PWR_MGMT_1                  = $6B
     PWR_MGMT_1_MASK             = $FF
-        FLD_H_RESET             = 7
-        MASK_H_RESET            = PWR_MGMT_1_MASK ^ (1 << FLD_H_RESET)
+        H_RESET                 = 7
+        SLEEP                   = 6
+        CYCLE                   = 5
+        GYRO_STANDBY            = 4
+        PD_PTAT                 = 3
+        CLKSEL                  = 0
+        CLKSEL_BITS             = %111
+        H_RESET_MASK            = (1 << H_RESET) ^ PWR_MGMT_1_MASK
+        SLEEP_MASK              = (1 << SLEEP) ^ PWR_MGMT_1_MASK
+        CYCLE_MASK              = (1 << CYCLE) ^ PWR_MGMT_1_MASK
+        GYRO_STANDBY_MASK       = (1 << GYRO_STANDBY) ^ PWR_MGMT_1_MASK
+        PD_PTAT_MASK            = (1 << PD_PTAT) ^ PWR_MGMT_1_MASK
+        CLKSEL_MASK             = CLKSEL_BITS ^ PWR_MGMT_1_MASK
 
     PWR_MGMT_2                  = $716C
     PWR_MGMT_2_MASK             = $3F
