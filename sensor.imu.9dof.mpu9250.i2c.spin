@@ -172,7 +172,7 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
             return
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
-' Read accelerometer data
+' Read accelerometer data   'xxx flag to choose data path? i.e., pull live data from sensor or from fifo... hub var
     tmp := $00
     readreg(core#ACCEL_XOUT_H, 6, @tmp)
 
@@ -329,6 +329,17 @@ PUB FIFOMode(mode): curr_mode
                 return lookupz(curr_mode: STREAM, FIFO)     '   either STREAM or FIFO as the current mode
             else
                 return BYPASS                               ' If not, anything besides 0 (BYPASS) doesn't really matter or make sense
+    mode := (curr_mode & core#FIFO_MODE_MASK) | mode
+    writereg(core#CONFIG, 1, @mode)
+
+PUB FIFORead(nr_bytes, ptr_data)
+' Read FIFO data
+    readreg(core#FIFO_R_W, nr_bytes, ptr_data)
+
+PUB FIFOReset{} | tmp
+' Reset the FIFO    XXX - expand..what exactly does it do?
+    tmp := 1 << core#FLD_FIFO_RST
+    writereg(core#USER_CTRL, 1, @tmp)
 
 PUB FIFOSource(mask): curr_mask
 ' Set FIFO source data, as a bitmask

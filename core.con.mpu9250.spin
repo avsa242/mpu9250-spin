@@ -210,7 +210,7 @@ CON
         MASK_I2C_MST_EN         = USER_CTRL_MASK ^ (1 << FLD_I2C_MST_EN)
         MASK_FIFO_EN            = USER_CTRL_MASK ^ (1 << FLD_FIFO_EN)
 
-    PWR_MGMT_1                  = $6B
+    PWR_MGMT_1                  = $716B
     PWR_MGMT_1_MASK             = $FF
         H_RESET                 = 7
         SLEEP                   = 6
