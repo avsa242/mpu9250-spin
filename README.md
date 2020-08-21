@@ -49,5 +49,5 @@ P2/SPIN2:
 - [x] Port to P2/SPIN2
 - [x] Add support for sensor calibration offsets
 - [x] Implement scaled sensor data methods
-- [ ] Calibration methods - WIP
+- [x] Calibration methods
 - [ ] SPI driver variant

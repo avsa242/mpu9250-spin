@@ -724,7 +724,8 @@ PUB MagDataReady{}: flag
     return (flag & %1) == 1
 
 PUB MagGauss(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
-
+' Read magnetomer data, calculated
+'   Returns: Magnetic field strength, in micro-Gauss (i.e., 1_000_000 = 1Gs)
     magdata(@tmpx, @tmpy, @tmpz)
     long[mx] := (tmpx * _mag_cnts_per_lsb)
     long[my] := (tmpy * _mag_cnts_per_lsb)
@@ -776,9 +777,9 @@ PUB MagTesla(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
 ' Read magnetomer data, calculated
 '   Returns: Magnetic field strength, in thousandths of a micro-Tesla/nano-Tesla (i.e., 12000 = 12uT)
     magdata(@tmpx, @tmpy, @tmpz)
-    long[mx] := (((tmpx * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-    long[my] := (((tmpy * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
-    long[mz] := (((tmpz * 1_000) - 128_000) / 256 + 1_000) * 4912 / 32760
+    long[mx] := (tmpx * _mag_cnts_per_lsb) * 100
+    long[my] := (tmpy * _mag_cnts_per_lsb) * 100
+    long[mz] := (tmpz * _mag_cnts_per_lsb) * 100
 
 PUB MagOpMode(mode): curr_mode
 ' Set magnetometer operating mode
