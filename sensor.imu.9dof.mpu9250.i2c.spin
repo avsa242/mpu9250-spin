@@ -238,7 +238,32 @@ PUB AccelScale(g): curr_scl
 
 PUB CalibrateAccel{}
 
-PUB CalibrateGyro{}
+PUB CalibrateGyro{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples, orig_scale, orig_datarate, orig_lpf
+' Calibrate the gyroscope
+    longfill(@tmpx, 0, 8)                                   ' Initialize variables to 0
+    orig_scale := gyroscale(-2)                             ' Preserve the user's original settings
+    orig_datarate := xlgdatarate(-2)
+    orig_lpf := gyrolowpassfilter(-2)
+
+    gyroscale(250)
+    gyrodatarate(1000)
+    gyrolowpassfilter(188)
+    gyrobias(0, 0, 0, W)                                    ' Reset gyroscope bias offsets
+    samples := 40                                           ' # samples to use for average
+
+    repeat samples                                          ' Accumulate samples to be averaged
+        repeat until gyrodataready
+        gyrodata(@tmpx, @tmpy, @tmpz)
+        tmpbiasraw[X_AXIS] -= tmpx                          ' Bias offsets are _added_ by the chip, so
+        tmpbiasraw[Y_AXIS] -= tmpy                          '   negate the samples
+        tmpbiasraw[Z_AXIS] -= tmpz
+
+                                                            ' Write offsets to sensor (scaled to expected range)
+    gyrobias((tmpbiasraw[X_AXIS]/samples) / 4, (tmpbiasraw[Y_AXIS]/samples) / 4, (tmpbiasraw[Z_AXIS]/samples) / 4, W)
+
+    gyroscale(orig_scale)                                   ' Restore user settings
+    gyrodatarate(orig_datarate)
+    gyrolowpassfilter(orig_lpf)
 
 PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, samples, opmode_orig
 ' Calibrate the magnetometer
