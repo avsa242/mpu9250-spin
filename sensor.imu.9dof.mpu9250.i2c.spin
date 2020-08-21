@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 15, 2020
+    Updated Aug 21, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -236,7 +236,40 @@ PUB AccelScale(g): curr_scl
     g := ((curr_scl & core#ACCEL_FS_SEL_MASK) | g) & core#ACCEL_CFG_MASK
     writereg(core#ACCEL_CFG, 1, @g)
 
-PUB CalibrateAccel{}
+PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples, factory_bias[3], orig_scale, orig_datarate, orig_lpf
+' Calibrate the accelerometer
+'   NOTE: The accelerometer must be oriented with the package top facing up for this method to be successful
+    longfill(@tmpx, 0, 14)                                   ' Initialize variables to 0
+    orig_scale := accelscale(-2)                            ' Preserve the user's original settings
+    orig_datarate := acceldatarate(-2)
+    orig_lpf := accellowpassfilter(-2)
+
+    accelscale(2)                                           ' Set accel to most sensitive scale,
+    acceldatarate(1000)                                     '   fastest sample rate,
+    accellowpassfilter(188)                                 '   and a low-pass filter of 188Hz
+
+                                                            ' MPU9250 accel has factory bias offsets,
+                                                            '   so read them in first
+    accelbias(@factory_bias[X_AXIS], @factory_bias[Y_AXIS], @factory_bias[Z_AXIS], 0)
+
+    samples := 40                                           ' # samples to use for averaging
+
+    repeat samples
+        repeat until acceldataready
+        acceldata(@tmpx, @tmpy, @tmpz)
+        tmpbiasraw[X_AXIS] += tmpx
+        tmpbiasraw[Y_AXIS] += tmpy
+        tmpbiasraw[Z_AXIS] += tmpz - (1_000_000 / _accel_cnts_per_lsb) ' Assumes sensor facing up!
+
+    repeat axis from X_AXIS to Z_AXIS
+        tmpbiasraw[axis] /= samples
+        tmpbiasraw[axis] := (factory_bias[axis] - (tmpbiasraw[axis]/8))
+
+    accelbias(tmpbiasraw[X_AXIS], tmpbiasraw[Y_AXIS], tmpbiasraw[Z_AXIS], W)
+
+    accelscale(orig_scale)                                  ' Restore user settings
+    acceldatarate(orig_datarate)
+    accellowpassfilter(orig_lpf)
 
 PUB CalibrateGyro{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples, orig_scale, orig_datarate, orig_lpf
 ' Calibrate the gyroscope
@@ -245,9 +278,9 @@ PUB CalibrateGyro{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples, orig_scale
     orig_datarate := xlgdatarate(-2)
     orig_lpf := gyrolowpassfilter(-2)
 
-    gyroscale(250)
-    gyrodatarate(1000)
-    gyrolowpassfilter(188)
+    gyroscale(250)                                          ' Set gyro to most sensitive scale,
+    gyrodatarate(1000)                                      '   fastest sample rate,
+    gyrolowpassfilter(188)                                  '   and a low-pass filter of 188Hz
     gyrobias(0, 0, 0, W)                                    ' Reset gyroscope bias offsets
     samples := 40                                           ' # samples to use for average
 
