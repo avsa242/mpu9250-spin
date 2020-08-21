@@ -339,6 +339,7 @@ PUB ClockSource(src): curr_src
 
 PUB DeviceID{}: id
 ' Read device ID
+'   Returns: AK8963 ID (LSB), MPU9250 ID (MSB)
     id := 0
     readreg(core#WIA, 1, @id.byte[0])
     readreg(core#WHO_AM_I, 1, @id.byte[1])
