@@ -184,6 +184,9 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
+PUB AccelDataOverrun()
+' dummy method
+
 PUB AccelDataRate(Hz=-2): curr_setting
 ' Set accelerometer output data rate, in Hz
 '   Valid values: 4..1000
@@ -324,6 +327,11 @@ PUB CalibrateMag() | magmin[3], magmax[3], magtmp[3], axis, samples, opmode_orig
 
     magbias((magmax[X_AXIS] + magmin[X_AXIS]) / 2, (magmax[Y_AXIS] + magmin[Y_AXIS]) / 2, (magmax[Z_AXIS] + magmin[Z_AXIS]) / 2, W) ' Write the mean of the samples just gathered as new bias offsets
     magopmode(opmode_orig)                                  ' Restore the user's original operating mode
+
+PUB CalibrateXLG()
+' Calibrate the accelerometer and gyroscope
+    calibrateaccel()
+    calibrategyro()
 
 PUB ClockSource(src=-2): curr_src
 ' Set sensor clock source
@@ -495,6 +503,9 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_x] := ~~tmp.word[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
+
+PUB GyroDataOverrun()
+' dummy method
 
 PUB GyroDataRate(Hz=-2): curr_setting
 ' Set gyroscope output data rate, in Hz
