@@ -1,11 +1,11 @@
 {
     --------------------------------------------
-    Filename: MPU9250-Demo.spin2
+    Filename: MPU9250-Demo.spin
     Author: Jesse Burt
     Description: Demo of the MPU9250 driver
     Copyright (c) 2020
-    Started Jun 10, 2020
-    Updated Jun 14, 2020
+    Started Sep 2, 2019
+    Updated Aug 21, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -14,19 +14,23 @@
 '#define MPU9250_SPI    NOT IMPLEMENTED YET
 CON
 
-     _xtlfreq   = cfg._xtlfreq
-     _clkfreq   = cfg._clkfreq_def
+    _clkfreq    = cfg._clkfreq_def
+    _xtlfreq    = cfg._xtlfreq
 
 ' -- User-modifiable constants
     LED         = cfg.LED1
-    SER_RX      = cfg.SER_RX
-    SER_TX      = cfg.SER_TX
+    SER_RX      = cfg#SER_RX
+    SER_TX      = cfg#SER_TX
     SER_BAUD    = 2_000_000
 
-    SCL_PIN     = 32                                        ' SPI, I2C
-    SDA_PIN     = 33                                        ' SPI, I2C
-    I2C_HZ      = 400_000                                   ' I2C
+    SCL_PIN     = 26                                       ' SPI, I2C
+    SDA_PIN     = 27                                       ' SPI, I2C
+    I2C_HZ      = 400_000                                  ' I2C
 ' --
+
+    DAT_X_COL   = 20
+    DAT_Y_COL   = DAT_X_COL + 15
+    DAT_Z_COL   = DAT_Y_COL + 15
 
 OBJ
 
@@ -41,163 +45,213 @@ VAR
 
     long _overruns
 
-PUB Main() | dispmode, axo, ayo, azo, gxo, gyo, gzo
+PUB Main() | dispmode
 
-    Setup()
-    imu.AccelScale(2)                                       ' 2, 4, 8, 16 (g's)
-    imu.AccelAxisEnabled(%111)                              ' 0 or 1 for each bit (%xyz)
+    setup()
+    imu.xlgdatarate(100)                                    ' 4..1000 (Hz)
+    imu.xlglowpassfilter(50)                                ' 5, 10, 20, 42, 98, 188 (Hz)
 
-    imu.GyroScale(500)                                      ' 250, 500, 1000, 2000
-    imu.GyroAxisEnabled(%111)                               ' 0 or 1 for each bit (%xyz)
-    imu.GyroBias(0, 0, 0, 1)                              ' x, y, z: 0..65535, rw = 1 (write)
+    imu.accelscale(2)                                       ' 2, 4, 8, 16 (g's)
+    imu.accelaxisenabled(%111)                              ' 0 or 1 for each bit (%xyz)
 
-    imu.MagScale(16)                                        ' 14, 16 (bits)
+    imu.gyroscale(250)                                      ' 250, 500, 1000, 2000
+    imu.gyroaxisenabled(%111)                               ' 0 or 1 for each bit (%xyz)
+    imu.gyrobias(0, 0, 0, 1)                                ' x, y, z: 0..65535, rw = 1 (write)
 
-    imu.IntMask(%00000000)
-    ser.HideCursor()
+    imu.magscale(16)                                        ' 14, 16 (bits)
+    imu.magbias(0, 0, 0, 1)
+
+    imu.intmask(%00000000)
+    ser.hidecursor()
     dispmode := 0
 
-    gxo := gyo := gzo := 0
-    axo := ayo := azo := 0
-    ser.position(0, 3)                                      ' Read back the settings from above
-    ser.printf("AccelScale: %d\n", imu.AccelScale())
-
-    imu.AccelBias(@axo, @ayo, @azo)                       ' MPU9250 Accel has some factory trim accel offsets
-    ser.printf("AccelBias: %d(x), %d(y), %d(z)\n", axo, ayo, azo)
-
-    ser.printf("GyroScale: %d\n", imu.GyroScale())
-    imu.GyroBias(@gxo, @gyo, @gzo)
-    ser.printf("GyroBias: %d(x), %d(y), %d(z)\n", gxo, gyo, gzo)
-
-    ser.printf("MagScale: %d\n", imu.MagScale())
-
-    ser.printf("IntMask: ")
-    ser.bin(imu.IntMask(-2), 8)
-    ser.newline()
+    displaysettings()
 
     repeat
-        case ser.RxCheck()
+        case ser.rxcheck()
             "q", "Q":                                       ' Quit the demo
-                ser.Position(0, 15)
-                ser.str(string("Halting"))
-                imu.Stop()
-                time.MSleep(5)
+                ser.position(0, 15)
+                ser.printf("Halting")
+                imu.stop()
+                waitms(5)
                 quit
             "c", "C":                                       ' Perform calibration
-                Calibrate()
+                calibrate()
+                displaysettings()
             "r", "R":                                       ' Change display mode: raw/calculated
-                ser.Position(0, 10)
+                ser.position(0, 10)
                 repeat 2
-                    ser.ClearLine(ser.CLR_CUR_TO_END)
-                    ser.Newline()
+                    ser.clearline()
+                    ser.newline()
                 dispmode ^= 1
 
-        ser.Position (0, 10)
         case dispmode
             0:
-                AccelRaw()
-                GyroRaw()
-                MagRaw()
+                ser.position(0, 12)
+                accelraw()
+                gyroraw()
+                magraw()
+
             1:
-                AccelCalc()
-                GyroCalc()
-                MagCalc()
+                ser.position(0, 12)
+                accelcalc()
+                gyrocalc()
+                magcalc()
 
         ser.position (0, 15)
-        ser.str(string("Interrupt: "))
-        ser.bin(imu.Interrupt(), 8)
+        ser.printf("Interrupt: ")
+        ser.bin(imu.interrupt(), 8)
 
-    ser.ShowCursor()
-    FlashLED(LED, 100)
+    ser.showcursor()
+    flashled(LED, 100)
 
 PUB AccelCalc() | ax, ay, az
 
-    repeat until imu.AccelDataReady()
-    imu.AccelG (@ax, @ay, @az)
-    ser.Str (string("Accel micro-g: "))
-    ser.Str (int.DecPadded (ax, 10))
-    ser.Str (int.DecPadded (ay, 10))
-    ser.Str (int.DecPadded (az, 10))
-    ser.clearline(ser.CLR_CUR_TO_END)
-    ser.Newline()
+    repeat until imu.acceldataready()
+    imu.accelg (@ax, @ay, @az)
+    ser.printf("Accel micro-g: ")
+    ser.position(DAT_X_COL, 12)
+    decimal(ax, 1000000)
+    ser.position(DAT_Y_COL, 12)
+    decimal(ay, 1000000)
+    ser.position(DAT_Z_COL, 12)
+    decimal(az, 1000000)
+    ser.clearline()
+    ser.newline()
 
 PUB AccelRaw() | ax, ay, az
 
-    repeat until imu.AccelDataReady()
-    imu.AccelData (@ax, @ay, @az)
-    ser.Str (string("Accel raw: "))
-    ser.Str (int.DecPadded (ax, 7))
-    ser.Str (int.DecPadded (ay, 7))
-    ser.Str (int.DecPadded (az, 7))
-    ser.clearline(ser.CLR_CUR_TO_END)
-    ser.Newline()
+    repeat until imu.acceldataready()
+    imu.acceldata (@ax, @ay, @az)
+    ser.printf("Accel raw: ")
+    ser.position(DAT_X_COL, 12)
+    ser.str (int.decpadded (ax, 7))
+    ser.position(DAT_Y_COL, 12)
+    ser.str (int.decpadded (ay, 7))
+    ser.position(DAT_Z_COL, 12)
+    ser.str (int.decpadded (az, 7))
+    ser.clearline()
+    ser.newline()
 
 PUB GyroCalc() | gx, gy, gz
 
-    repeat until imu.GyroDataReady()
-    imu.GyroDPS (@gx, @gy, @gz)
-    ser.Str (string("Gyro micro DPS:  "))
-    ser.Str (int.DecPadded (gx, 11))
-    ser.Str (int.DecPadded (gy, 11))
-    ser.Str (int.DecPadded (gz, 11))
-    ser.clearline(ser.CLR_CUR_TO_END)
+    repeat until imu.gyrodataready()
+    imu.gyrodps (@gx, @gy, @gz)
+    ser.printf("Gyro micro DPS:  ")
+    ser.position(DAT_X_COL, 13)
+    decimal(gx, 1000000)
+    ser.position(DAT_Y_COL, 13)
+    decimal(gy, 1000000)
+    ser.position(DAT_Z_COL, 13)
+    decimal(gz, 1000000)
+    ser.clearline()
     ser.newline()
 
 PUB GyroRaw() | gx, gy, gz
 
-    repeat until imu.GyroDataReady()
-    imu.GyroData (@gx, @gy, @gz)
-    ser.Str (string("Gyro raw:  "))
-    ser.Str (int.DecPadded (gx, 7))
-    ser.Str (int.DecPadded (gy, 7))
-    ser.Str (int.DecPadded (gz, 7))
-    ser.clearline(ser.CLR_CUR_TO_END)
+    repeat until imu.gyrodataready()
+    imu.gyrodata (@gx, @gy, @gz)
+    ser.printf("Gyro raw:  ")
+    ser.position(DAT_X_COL, 13)
+    ser.str (int.decpadded (gx, 7))
+    ser.position(DAT_Y_COL, 13)
+    ser.str (int.decpadded (gy, 7))
+    ser.position(DAT_Z_COL, 13)
+    ser.str (int.decpadded (gz, 7))
+    ser.clearline()
     ser.newline()
 
 PUB MagCalc() | mx, my, mz
 
-    repeat until imu.MagDataReady()
-    imu.MagTesla (@mx, @my, @mz)
-    ser.Str (string("Mag nano T:   "))
-    ser.Str (int.DecPadded (mx, 10))
-    ser.Str (int.DecPadded (my, 10))
-    ser.Str (int.DecPadded (mz, 10))
-    ser.clearline(ser.CLR_CUR_TO_END)
+    repeat until imu.magdataready()
+    imu.maggauss (@mx, @my, @mz)
+    ser.printf("Mag gauss:   ")
+    ser.position(DAT_X_COL, 14)
+    decimal(mx, 1000)
+    ser.position(DAT_Y_COL, 14)
+    decimal(my, 1000)
+    ser.position(DAT_Z_COL, 14)
+    decimal(mz, 1000)
+    ser.clearline()
     ser.newline()
 
 PUB MagRaw() | mx, my, mz
 
-    repeat until imu.MagDataReady()
-    imu.MagData (@mx, @my, @mz)
-    ser.Str (string("Mag raw:  "))
-    ser.Str (int.DecPadded (mx, 7))
-    ser.Str (int.DecPadded (my, 7))
-    ser.Str (int.DecPadded (mz, 7))
-    ser.clearline(ser.CLR_CUR_TO_END)
+    repeat until imu.magdataready()
+    imu.magdata (@mx, @my, @mz)
+    ser.printf("Mag raw:  ")
+    ser.position(DAT_X_COL, 14)
+    ser.str (int.decpadded (mx, 7))
+    ser.position(DAT_Y_COL, 14)
+    ser.str (int.decpadded (my, 7))
+    ser.position(DAT_Z_COL, 14)
+    ser.str (int.decpadded (mz, 7))
+    ser.clearline()
     ser.newline()
 
 PUB Calibrate()
-' XXX not yet implemented
-    ser.Position (0, 14)
-    ser.Str(string("Calibrating..."))
-'    imu.Calibrate
-    ser.Position (0, 14)
-    ser.Str(string("              "))
+
+    ser.position (0, 21)
+    ser.printf("Calibrating...")
+    imu.calibratemag()
+    imu.calibrateaccel()
+    imu.calibrategyro()
+    ser.position (0, 21)
+    ser.printf("              ")
+
+PUB DisplaySettings() | axo, ayo, azo, gxo, gyo, gzo, mxo, myo, mzo
+
+    ser.position(0, 3)                                      ' Read back the settings from above
+    ser.printf("AccelScale: %dg\n", imu.accelscale())
+    ser.printf("GyroScale: %ddps\n", imu.gyroscale())
+
+    imu.gyrobias(@gxo, @gyo, @gzo)
+    ser.printf("GyroBias: %d (x), %d (y), %d (z)\n", gxo, gyo, gzo)
+
+    imu.accelbias(@axo, @ayo, @azo)
+    ser.printf("AccelBias: %d (x), %d (y), %d (z)\n", axo, ayo, azo)
+
+    imu.magbias(@mxo, @myo, @mzo, 0)
+    ser.printf("MagBias: %d (x), %d (y), %d (z)\n", mxo, myo, mzo)
+
+    ser.printf("MagScale: %d\n", imu.magscale())
+    ser.printf("IntMask: ")
+    ser.bin(imu.intmask(), 8)
+    ser.newline()
+
+PRI Decimal(scaled, divisor) | whole[4], part[4], places, tmp
+' Display a fixed-point scaled up number in decimal-dot notation - scale it back down by divisor
+'   e.g., Decimal (314159, 100000) would display 3.14159 on the termainl
+'   scaled: Fixed-point scaled up number
+'   divisor: Divide scaled-up number by this amount
+    whole := scaled / divisor
+    tmp := divisor
+    places := 0
+
+    repeat
+        tmp /= 10
+        places++
+    until tmp == 1
+    part := int.deczeroed(abs(scaled // divisor), places)
+
+    ser.dec (whole)
+    ser.char (".")
+    ser.str (part)
 
 PUB Setup()
 
     repeat until ser.StartRXTX (SER_RX, SER_TX, 0, SER_BAUD)
-    time.MSleep(30)
-    ser.Clear()
-    ser.Str(string("Serial terminal started", ser.CR, ser.LF))
-    if imu.Start(SCL_PIN, SDA_PIN, I2C_HZ)
-        imu.Defaults()
-        ser.str(string("MPU9250 driver started (I2C)", ser.CR, ser.LF))
+    waitms(30)
+    ser.clear()
+    ser.printf("Serial terminal started\n")
+    if imu.start(SCL_PIN, SDA_PIN, I2C_HZ)
+        imu.defaults()
+        ser.printf("MPU9250 driver started (I2C)\n")
     else
-        ser.str(string("MPU9250 driver failed to start - halting", ser.CR, ser.LF))
-        imu.Stop()
-        time.MSleep(5)
-        FlashLED(LED, 500)
+        ser.printf("MPU9250 driver failed to start - halting\n")
+        imu.stop()
+        waitms(5)
+        flashled(LED, 500)
 
 #include "lib.utility.spin2"
 
