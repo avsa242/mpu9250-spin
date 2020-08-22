@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2020
     Started Sep 2, 2019
-    Updated Aug 21, 2020
+    Updated Aug 22, 2020
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -782,7 +782,7 @@ PUB MagTesla(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
     long[my] := (tmpy * _mag_cnts_per_lsb) * 100
     long[mz] := (tmpz * _mag_cnts_per_lsb) * 100
 
-PUB MagOpMode(mode): curr_mode
+PUB MagOpMode(mode): curr_mode | tmp
 ' Set magnetometer operating mode
 '   Valid values:
 '      *POWERDOWN (0): Power down
@@ -801,7 +801,10 @@ PUB MagOpMode(mode): curr_mode
             return curr_mode & core#BITS_MODE
 
     mode := ((curr_mode & core#MASK_MODE) | mode) & core#CNTL1_MASK
-    writereg(core#CNTL1, 1, @mode)
+    tmp := POWERDOWN
+    writereg(core#CNTL1, 1, @tmp)                           ' Transition to power down state
+    time.msleep(100)                                        '   and wait 100ms first, per AK8963 datasheet
+    writereg(core#CNTL1, 1, @mode)                          ' Then, transition to the selected mode
 
 PUB MeasureMag{}
 ' Perform magnetometer measurement
