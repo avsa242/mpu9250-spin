@@ -209,6 +209,9 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
+PUB AccelDataOverrun()
+' dummy method
+
 PUB AccelDataRate(rate): curr_rate
 ' Set accelerometer output data rate, in Hz
 '   Valid values: 4..1000
@@ -547,6 +550,9 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_x] := ~~tmp.word[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
+
+PUB GyroDataOverrun()
+' dummy method
 
 PUB GyroDataRate(rate): curr_rate
 ' Set gyroscope output data rate, in Hz
