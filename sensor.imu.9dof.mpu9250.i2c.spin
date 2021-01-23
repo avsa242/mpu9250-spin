@@ -375,6 +375,11 @@ PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, samples, orig_opmd
     magbias((magmax[X_AXIS] + magmin[X_AXIS]) / 2, (magmax[Y_AXIS] + magmin[Y_AXIS]) / 2, (magmax[Z_AXIS] + magmin[Z_AXIS]) / 2, W) ' Write the average of the samples just gathered as new bias offsets
     magopmode(orig_opmd)                        ' Restore user settings
 
+PUB CalibrateXLG{}
+' Calibrate accelerometer and gyroscope
+    calibrateaccel{}
+    calibrategyro{}
+
 PUB ClockSource(src): curr_src
 ' Set sensor clock source
 '   Valid values:
