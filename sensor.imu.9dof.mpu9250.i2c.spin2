@@ -170,7 +170,7 @@ PUB AccelAxisEnabled(xyz_mask=-2): curr_mask
     xyz_mask := ((curr_mask & core.DIS_XYZA_MASK) | xyz_mask)
     writereg(core.PWR_MGMT_2, 1, @xyz_mask)
 
-PUB AccelBias(ptr_x, ptr_y, ptr_z, rw=R) | tmp[3], tc_bit[3]
+PUB AccelBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[3], tc_bit[3]
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -530,7 +530,7 @@ PUB GyroAxisEnabled(xyz_mask=-2): curr_mask
     xyz_mask := ((curr_mask & core.DIS_XYZG_MASK) | xyz_mask)
     writereg(core.PWR_MGMT_2, 1, @xyz_mask)
 
-PUB GyroBias(ptr_x, ptr_y, ptr_z, rw=R) | tmp[3]
+PUB GyroBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[3]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -742,7 +742,7 @@ PUB MagADCRes(bits=-2): curr_res
     bits := ((curr_res & core.BIT_MASK) | bits)
     writereg(core.CNTL1, 1, @bits)
 
-PUB MagBias(ptr_x, ptr_y, ptr_z, rw=R)
+PUB MagBias(ptr_x, ptr_y, ptr_z, rw=0)
 ' Read or write/manually set magnetometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
