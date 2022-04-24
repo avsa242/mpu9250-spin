@@ -3,12 +3,13 @@
     Filename: sensor.imu.9dof.mpu9250.i2c.spin
     Author: Jesse Burt
     Description: Driver for the InvenSense MPU9250
-    Copyright (c) 2021
+    Copyright (c) 2022
     Started Sep 2, 2019
-    Updated Jan 22, 2021
+    Updated Apr 24, 2021
     See end of file for terms of use.
     --------------------------------------------
 }
+#include "sensor.imu.common.spinh"
 
 CON
 
@@ -36,6 +37,14 @@ CON
     MAG_DOF             = 3
     BARO_DOF            = 0
     DOF                 = ACCEL_DOF + GYRO_DOF + MAG_DOF + BARO_DOF
+
+' Scales and data rates used during calibration/bias/offset process
+    CAL_XL_SCL          = 2
+    CAL_G_SCL           = 250
+    CAL_M_SCL           = 48
+    CAL_XL_DR           = 1000
+    CAL_G_DR            = 200
+    CAL_M_DR            = 100
 
 ' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
     R                   = 0
@@ -84,15 +93,16 @@ CON
 
 VAR
 
-    long _mag_bias[3]
+    long _mag_bias[MAG_DOF]
+    long _abias_fact[ACCEL_DOF]
     word _ares, _gres, _mres
-    byte _mag_sens_adj[3]
+    byte _mag_sens_adj[MAG_DOF]
     byte _temp_scale
 
 OBJ
 
     i2c : "com.i2c"
-    core: "core.con.mpu9250.spin"
+    core: "core.con.mpu9250"
     time: "time"
 
 PUB Null{}
@@ -108,15 +118,20 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): status
 }   I2C_HZ =< core#I2C_MAX_FREQ
         if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
             time.usleep(core#TREGRW)            ' startup time
-            if i2c.present(SLAVE_XLG)           ' check device bus presence
-                ' setup to read the magnetometer from the same bus as XL & G
-                disablei2cmaster{}
-                if deviceid{} == core#DEVID_RESP
-                    return status
+            ' setup to read the magnetometer from the same bus as XL & G
+            disablei2cmaster{}
+            if deviceid{} == core#DEVID_RESP
+                { read the factory accel bias }
+                accelbias(@_abias_fact[X_AXIS], @_abias_fact[Y_AXIS], @_abias_fact[Z_AXIS], R)
+                return status
     ' if this point is reached, something above failed
     ' Double check I/O pin assignments, connections, power
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
+
+PUB Stop{}
+' Stop/deinitialize driver
+    i2c.deinit{}
 
 PUB Defaults{}
 ' Factory default settings
@@ -152,10 +167,6 @@ PUB Preset_XL_G_M{}
     magscale(16)
     tempscale(C)
 
-PUB Stop{}
-' Stop/deinitialize driver
-    i2c.deinit{}
-
 PUB AccelAxisEnabled(xyz_mask): curr_mask
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:
@@ -177,7 +188,7 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#DIS_XYZA_MASK) | xyz_mask)
     writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
+PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[ACCEL_DOF]
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -194,19 +205,13 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3], tc_bit[3]
 
     case rw
         W:
-            ' preserve temperature compensation bit
-            tc_bit[X_AXIS] := tmp[X_AXIS] & 1
-            tc_bit[Y_AXIS] := tmp[Y_AXIS] & 1
-            tc_bit[Z_AXIS] := tmp[Z_AXIS] & 1
-
-            ptr_x := (ptr_x & $FFFE) | tc_bit[X_AXIS]
-            ptr_y := (ptr_y & $FFFE) | tc_bit[Y_AXIS]
-            ptr_z := (ptr_z & $FFFE) | tc_bit[Z_AXIS]
+            ptr_x := ((_abias_fact[X_AXIS]-(ptr_x / 8)) & $FFFE) | (tmp[X_AXIS] & 1)
+            ptr_y := ((_abias_fact[Y_AXIS]-(ptr_y / 8)) & $FFFE) | (tmp[Y_AXIS] & 1)
+            ptr_z := ((_abias_fact[Z_AXIS]-(ptr_z / 8)) & $FFFE) | (tmp[Z_AXIS] & 1)
 
             writereg(core#XA_OFFS_H, 2, @ptr_x)
             writereg(core#YA_OFFS_H, 2, @ptr_y)
             writereg(core#ZA_OFFS_H, 2, @ptr_z)
-
         R:
             long[ptr_x] := ~~tmp[X_AXIS]
             long[ptr_y] := ~~tmp[Y_AXIS]
@@ -223,6 +228,9 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
+PUB AccelDataOverrun{}
+' dummy method
+
 PUB AccelDataRate(rate): curr_rate
 ' Set accelerometer output data rate, in Hz
 '   Valid values: 4..1000
@@ -233,14 +241,6 @@ PUB AccelDataReady{}: flag
 ' Flag indicating new accelerometer data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return xlgdataready{}
-
-PUB AccelG(ptr_x, ptr_y, ptr_z) | tmpx, tmpy, tmpz
-' Read accelerometer data, calculated
-'   Returns: Linear acceleration in millionths of a g
-    acceldata(@tmpx, @tmpy, @tmpz)
-    long[ptr_x] := (tmpx * _ares)
-    long[ptr_y] := (tmpy * _ares)
-    long[ptr_z] := (tmpz * _ares)
 
 PUB AccelLowPassFilter(freq): curr_freq | lpf_byp_bit
 ' Set accelerometer output data low-pass filter cutoff frequency, in Hz
@@ -282,103 +282,9 @@ PUB AccelScale(g): curr_scl
     g := ((curr_scl & core#ACCEL_FS_SEL_MASK) | g) & core#ACCEL_CFG_MASK
     writereg(core#ACCEL_CFG, 1, @g)
 
-PUB CalibrateAccel{} | tmpx, tmpy, tmpz, tmpbiasraw[3], axis, samples, {
-}factory_bias[3], orig_scale, orig_datarate, orig_lpf
-' Calibrate the accelerometer
-'   NOTE: The accelerometer must be oriented with the package top facing up
-'   for this method to be successful
-    longfill(@tmpx, 0, 14)                      ' Initialize variables to 0
-    orig_scale := accelscale(-2)                ' Preserve original settings
-    orig_datarate := acceldatarate(-2)
-    orig_lpf := accellowpassfilter(-2)
-
-    accelscale(2)                               ' Set to most sensitive scale,
-    acceldatarate(1000)                         '   fastest sample rate,
-    accellowpassfilter(188)                     '   and a LPF of 188Hz
-
-                                                ' MPU9250 accel has factory bias offsets,
-                                                '   so read them in first
-    accelbias(@factory_bias[X_AXIS], @factory_bias[Y_AXIS], @factory_bias[Z_AXIS], 0)
-
-    samples := 40                               ' # samples to use for averaging
-
-    repeat samples
-        repeat until acceldataready
-        acceldata(@tmpx, @tmpy, @tmpz)
-        tmpbiasraw[X_AXIS] += tmpx
-        tmpbiasraw[Y_AXIS] += tmpy
-        tmpbiasraw[Z_AXIS] += tmpz - (1_000_000 / _ares)
-
-    repeat axis from X_AXIS to Z_AXIS
-        tmpbiasraw[axis] /= samples
-        tmpbiasraw[axis] := (factory_bias[axis] - (tmpbiasraw[axis]/8))
-
-    accelbias(tmpbiasraw[X_AXIS], tmpbiasraw[Y_AXIS], tmpbiasraw[Z_AXIS], W)
-
-    accelscale(orig_scale)                      ' Restore user settings
-    acceldatarate(orig_datarate)
-    accellowpassfilter(orig_lpf)
-
-PUB CalibrateGyro{} | tmpx, tmpy, tmpz, tmpbias[3], axis, samples, orig_scl, orig_drate, orig_lpf
-' Calibrate the gyroscope
-    longfill(@tmpx, 0, 11)                      ' Initialize variables to 0
-    orig_scl := gyroscale(-2)                   ' Preserve original settings
-    orig_drate := xlgdatarate(-2)
-    orig_lpf := gyrolowpassfilter(-2)
-
-    gyroscale(250)                              ' Set to most sensitive scale,
-    gyrodatarate(1000)                          '   fastest sample rate,
-    gyrolowpassfilter(188)                      '   and a LPF of 188Hz
-    gyrobias(0, 0, 0, W)                        ' Reset gyroscope bias offsets
-    samples := 40                               ' # samples to use for average
-
-    repeat samples                              ' Accumulate samples to be averaged
-        repeat until gyrodataready
-        gyrodata(@tmpx, @tmpy, @tmpz)
-        tmpbias[X_AXIS] -= tmpx                 ' offsets are _added_ by the
-        tmpbias[Y_AXIS] -= tmpy                 ' chip, so negate the samples
-        tmpbias[Z_AXIS] -= tmpz
-
-                                                ' Write offsets to sensor (scaled to expected range)
-    gyrobias((tmpbias[X_AXIS]/samples) / 4, (tmpbias[Y_AXIS]/samples) / 4,{
-}   (tmpbias[Z_AXIS]/samples) / 4, W)
-
-    gyroscale(orig_scl)                         ' Restore user settings
-    gyrodatarate(orig_drate)
-    gyrolowpassfilter(orig_lpf)
-
-PUB CalibrateMag{} | magmin[3], magmax[3], magtmp[3], axis, samples, orig_opmd
-' Calibrate the magnetometer
-    longfill(@magmin, 0, 13)                    ' Initialize variables to 0
-    orig_opmd := magopmode(-2)                  ' Preserve original settings,
-    magopmode(CONT100)
-    magbias(0, 0, 0, W)                         ' Reset magnetometer bias offsets
-    samples := 10                               ' # samples to use for mean
-
-    ' Establish initial minimum and maximum values:
-    ' Start as the same value to avoid skewing the
-    '   calcs (because vars were initialized with 0)
-    magdata(@magtmp[X_AXIS], @magtmp[Y_AXIS], @magtmp[Z_AXIS])
-    magmax[X_AXIS] := magmin[X_AXIS] := magtmp[X_AXIS]
-    magmax[Y_AXIS] := magmin[Y_AXIS] := magtmp[Y_AXIS]
-    magmax[Z_AXIS] := magmin[Z_AXIS] := magtmp[Z_AXIS]
-
-    repeat samples
-        repeat until magdataready{}
-        magdata(@magtmp[X_AXIS], @magtmp[Y_AXIS], @magtmp[Z_AXIS])
-        repeat axis from X_AXIS to Z_AXIS
-            ' Find the maximum value seen during sampling
-            '   as well as the minimum, for each axis
-            magmax[axis] := magtmp[axis] #> magmax[axis]
-            magmin[axis] := magtmp[axis] <# magmin[axis]
-
-    magbias((magmax[X_AXIS] + magmin[X_AXIS]) / 2, (magmax[Y_AXIS] + magmin[Y_AXIS]) / 2, (magmax[Z_AXIS] + magmin[Z_AXIS]) / 2, W) ' Write the average of the samples just gathered as new bias offsets
-    magopmode(orig_opmd)                        ' Restore user settings
-
-PUB CalibrateXLG{}
-' Calibrate accelerometer and gyroscope
-    calibrateaccel{}
-    calibrategyro{}
+PUB AccelWord2G(accel_word): accel_g
+' Convert accelerometer ADC word to g's
+    return (accel_word * _ares)
 
 PUB ClockSource(src): curr_src
 ' Set sensor clock source
@@ -544,10 +450,12 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3]
 '               Pointers to variables to hold current settings for respective axes
     case rw
         W:
+            ptr_x /= -ptr_x / 4
+            ptr_y /= -ptr_x / 4
+            ptr_z /= -ptr_x / 4
             writereg(core#XG_OFFS_USR, 2, @ptr_x)
             writereg(core#YG_OFFS_USR, 2, @ptr_y)
             writereg(core#ZG_OFFS_USR, 2, @ptr_z)
-
         R:
             readreg(core#XG_OFFS_USR, 2, @tmp[X_AXIS])
             readreg(core#YG_OFFS_USR, 2, @tmp[Y_AXIS])
@@ -567,6 +475,9 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
+PUB GyroDataOverrun{}
+' dummy method
+
 PUB GyroDataRate(rate): curr_rate
 ' Set gyroscope output data rate, in Hz
 '   Valid values: 4..1000
@@ -577,13 +488,6 @@ PUB GyroDataReady{}: flag
 ' Flag indicating new gyroscope data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return xlgdataready{}
-
-PUB GyroDPS(gx, gy, gz) | tmpx, tmpy, tmpz
-'Read gyroscope calibrated data (micro-degrees per second)
-    gyrodata(@tmpx, @tmpy, @tmpz)
-    long[gx] := (tmpx * _gres)
-    long[gy] := (tmpy * _gres)
-    long[gz] := (tmpz * _gres)
 
 PUB GyroLowPassFilter(freq): curr_freq | lpf_byp_bits
 ' Set gyroscope output data low-pass filter cutoff frequency, in Hz
@@ -628,6 +532,10 @@ PUB GyroScale(scale): curr_scl
 
     scale := ((curr_scl & core#GYRO_FS_SEL_MASK) | scale)
     writereg(core#GYRO_CFG, 1, @scale)
+
+PUB GyroWord2DPS(gyro_word): gyro_dps
+' Convert gyroscope ADC word to degrees per second
+    return (gyro_word * _gres)
 
 PUB IntActiveState(state): curr_state
 ' Set interrupt pin active state/logic level
@@ -808,14 +716,6 @@ PUB MagDataReady{}: flag
     readreg(core#ST1, 1, @flag)
     return ((flag & 1) == 1)
 
-PUB MagGauss(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
-' Read magnetomer data, calculated
-'   Returns: Magnetic field strength, in micro-Gauss (i.e., 1_000_000 = 1Gs)
-    magdata(@tmpx, @tmpy, @tmpz)
-    long[mx] := (tmpx * _mres)
-    long[my] := (tmpy * _mres)
-    long[mz] := (tmpz * _mres)
-
 PUB MagOverflow{}: flag
 ' Flag indicating magnetometer measurement has overflowed
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
@@ -857,14 +757,6 @@ PUB MagSoftReset{} | tmp
     tmp := core#SOFT_RST
     writereg(core#CNTL2, 1, @tmp)
 
-PUB MagTesla(mx, my, mz) | tmpx, tmpy, tmpz ' XXX unverified
-' Read magnetomer data, calculated
-'   Returns: Magnetic field strength, in thousandths of a micro-Tesla/nano-Tesla (i.e., 12000 = 12uT)
-    magdata(@tmpx, @tmpy, @tmpz)
-    long[mx] := (tmpx * _mres) * 100
-    long[my] := (tmpy * _mres) * 100
-    long[mz] := (tmpz * _mres) * 100
-
 PUB MagOpMode(mode): curr_mode | tmp
 ' Set magnetometer operating mode
 '   Valid values:
@@ -888,6 +780,14 @@ PUB MagOpMode(mode): curr_mode | tmp
     writereg(core#CNTL1, 1, @tmp)               ' power down state
     time.msleep(100)                            ' wait 100ms first
     writereg(core#CNTL1, 1, @mode)              ' switch to the selected mode
+
+PUB MagWord2Gauss(mag_word): mag_gauss
+' Convert magnetometer ADC word to Gauss
+    return (mag_word * _mres)
+
+PUB MagWord2Tesla(mag_word): mag_tesla
+' Convert magnetometer ADC word to Teslas
+    return (mag_word *_mres) / 10_000
 
 PUB MeasureMag{}
 ' Perform magnetometer measurement
