@@ -40,8 +40,8 @@ CON
     CAL_XL_SCL          = 2
     CAL_G_SCL           = 250
     CAL_M_SCL           = 48
-    CAL_XL_DR           = 1000
-    CAL_G_DR            = 200
+    CAL_XL_DR           = 400
+    CAL_G_DR            = 400
     CAL_M_DR            = 100
 
 ' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
@@ -206,20 +206,20 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[ACCEL_DOF]
             writereg(core.YA_OFFS_H, 2, @ptr_y)
             writereg(core.ZA_OFFS_H, 2, @ptr_z)
         R:
-            long[ptr_x] := ~~tmp[X_AXIS]
-            long[ptr_y] := ~~tmp[Y_AXIS]
-            long[ptr_z] := ~~tmp[Z_AXIS]
+            long[ptr_x] := (tmp[X_AXIS] signx 15)
+            long[ptr_y] := (tmp[Y_AXIS] signx 15)
+            long[ptr_z] := (tmp[Z_AXIS] signx 15)
         other:
             return
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
-' Read accelerometer data   'xxx flag to choose data path? i.e., pull live data from sensor or from fifo... hub var
+' Read accelerometer data
     tmp := 0
     readreg(core.ACCEL_XOUT_H, 6, @tmp)
 
-    long[ptr_x] := ~~tmp.word[2]
-    long[ptr_y] := ~~tmp.word[1]
-    long[ptr_z] := ~~tmp.word[0]
+    long[ptr_x] := (tmp.word[2] signx 15)
+    long[ptr_y] := (tmp.word[1] signx 15)
+    long[ptr_z] := (tmp.word[0] signx 15)
 
 PUB AccelDataOverrun()
 ' dummy method
@@ -433,7 +433,7 @@ PUB GyroAxisEnabled(xyz_mask=-2): curr_mask
     xyz_mask := ((curr_mask & core.DIS_XYZG_MASK) | xyz_mask)
     writereg(core.PWR_MGMT_2, 1, @xyz_mask)
 
-PUB GyroBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[3]
+PUB GyroBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[GYRO_DOF]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -441,11 +441,15 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[3]
 '       When rw == R (0, read)
 '           ptr_x, ptr_y, ptr_z:
 '               Pointers to variables to hold current settings for respective axes
+    longfill(@tmp, 0, GYRO_DOF)
     case rw
         W:
-            ptr_x /= -ptr_x / 4
-            ptr_y /= -ptr_x / 4
-            ptr_z /= -ptr_x / 4
+            ptr_x := ptr_x / 4
+            ptr_y := ptr_x / 4
+            ptr_z := ptr_x / 4
+            -ptr_x
+            -ptr_y
+            -ptr_z
             writereg(core.XG_OFFS_USR, 2, @ptr_x)
             writereg(core.YG_OFFS_USR, 2, @ptr_y)
             writereg(core.ZG_OFFS_USR, 2, @ptr_z)
@@ -453,9 +457,9 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw=0) | tmp[3]
             readreg(core.XG_OFFS_USR, 2, @tmp[X_AXIS])
             readreg(core.YG_OFFS_USR, 2, @tmp[Y_AXIS])
             readreg(core.ZG_OFFS_USR, 2, @tmp[Z_AXIS])
-            long[ptr_x] := ~~tmp[X_AXIS]
-            long[ptr_y] := ~~tmp[Y_AXIS]
-            long[ptr_z] := ~~tmp[Z_AXIS]
+            long[ptr_x] := (tmp[X_AXIS] signx 15)
+            long[ptr_y] := (tmp[Y_AXIS] signx 15)
+            long[ptr_z] := (tmp[Z_AXIS] signx 15)
         other:
             return
 
@@ -464,9 +468,9 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     tmp := 0
     readreg(core.GYRO_XOUT_H, 6, @tmp)
 
-    long[ptr_x] := ~~tmp.word[2]
-    long[ptr_y] := ~~tmp.word[1]
-    long[ptr_z] := ~~tmp.word[0]
+    long[ptr_x] := (tmp.word[2] signx 15)
+    long[ptr_y] := (tmp.word[1] signx 15)
+    long[ptr_z] := (tmp.word[0] signx 15)
 
 PUB GyroDataOverrun()
 ' dummy method
@@ -674,9 +678,9 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
     tmp.word[X_AXIS] -= _mag_bias[X_AXIS]
     tmp.word[Y_AXIS] -= _mag_bias[Y_AXIS]
     tmp.word[Z_AXIS] -= _mag_bias[Z_AXIS]
-    long[ptr_x] := ~~tmp.word[X_AXIS] * _mag_sens_adj[X_AXIS]
-    long[ptr_y] := ~~tmp.word[Y_AXIS] * _mag_sens_adj[Y_AXIS]
-    long[ptr_z] := ~~tmp.word[Z_AXIS] * _mag_sens_adj[Z_AXIS]
+    long[ptr_x] := (tmp.word[X_AXIS] signx 15) * _mag_sens_adj[X_AXIS]
+    long[ptr_y] := (tmp.word[Y_AXIS] signx 15) * _mag_sens_adj[Y_AXIS]
+    long[ptr_z] := (tmp.word[Z_AXIS] signx 15) * _mag_sens_adj[Z_AXIS]
 
 PUB MagDataOverrun(): flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)

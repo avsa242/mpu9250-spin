@@ -42,8 +42,8 @@ CON
     CAL_XL_SCL          = 2
     CAL_G_SCL           = 250
     CAL_M_SCL           = 48
-    CAL_XL_DR           = 1000
-    CAL_G_DR            = 200
+    CAL_XL_DR           = 400
+    CAL_G_DR            = 400
     CAL_M_DR            = 100
 
 ' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
@@ -220,7 +220,7 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[ACCEL_DOF]
             return
 
 PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
-' Read accelerometer data   'xxx flag to choose data path? i.e., pull live data from sensor or from fifo... hub var
+' Read accelerometer data
     tmp := 0
     readreg(core#ACCEL_XOUT_H, 6, @tmp)
 
@@ -440,7 +440,7 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#DIS_XYZG_MASK) | xyz_mask)
     writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3]
+PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[GYRO_DOF]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -448,11 +448,15 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[3]
 '       When rw == R (0, read)
 '           ptr_x, ptr_y, ptr_z:
 '               Pointers to variables to hold current settings for respective axes
+    longfill(@tmp, 0, GYRO_DOF)
     case rw
         W:
-            ptr_x /= -ptr_x / 4
-            ptr_y /= -ptr_x / 4
-            ptr_z /= -ptr_x / 4
+            ptr_x := ptr_x / 4
+            ptr_y := ptr_x / 4
+            ptr_z := ptr_x / 4
+            -ptr_x
+            -ptr_y
+            -ptr_z
             writereg(core#XG_OFFS_USR, 2, @ptr_x)
             writereg(core#YG_OFFS_USR, 2, @ptr_y)
             writereg(core#ZG_OFFS_USR, 2, @ptr_z)
