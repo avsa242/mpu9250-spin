@@ -95,7 +95,7 @@ VAR
 
     long _mag_bias[MAG_DOF]
     long _abias_fact[ACCEL_DOF]
-    word _ares, _gres, _mres
+    long _ares, _gres, _mres[MAG_DOF]
     byte _mag_sens_adj[MAG_DOF]
     byte _temp_scale
 
@@ -281,10 +281,6 @@ PUB AccelScale(g): curr_scl
 
     g := ((curr_scl & core#ACCEL_FS_SEL_MASK) | g) & core#ACCEL_CFG_MASK
     writereg(core#ACCEL_CFG, 1, @g)
-
-PUB AccelWord2G(accel_word): accel_g
-' Convert accelerometer ADC word to g's
-    return (accel_word * _ares)
 
 PUB ClockSource(src): curr_src
 ' Set sensor clock source
@@ -537,10 +533,6 @@ PUB GyroScale(scale): curr_scl
     scale := ((curr_scl & core#GYRO_FS_SEL_MASK) | scale)
     writereg(core#GYRO_CFG, 1, @scale)
 
-PUB GyroWord2DPS(gyro_word): gyro_dps
-' Convert gyroscope ADC word to degrees per second
-    return (gyro_word * _gres)
-
 PUB IntActiveState(state): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
@@ -636,7 +628,7 @@ PUB IntOutputType(mode): curr_mode
     mode := ((curr_mode & core#OPEN_MASK) | mode) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @mode)
 
-PUB MagADCRes(bits): curr_res
+PUB MagADCRes(bits): curr_res | tmp
 ' Set magnetometer ADC resolution, in bits
 '   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
@@ -645,8 +637,8 @@ PUB MagADCRes(bits): curr_res
     case bits
         14, 16:
             ' set scale factor based on current ADC res
-            _mres := lookdownz(bits: 14, 16)
-            _mres := lookupz(_mres: 5_997, 1_499)
+            tmp := lookdownz(bits: 14, 16)
+            longfill(@_mres, lookupz(tmp: 5_997, 1_499), MAG_DOF)
             bits := lookdownz(bits: 14, 16) << core#BIT
         other:
             curr_res := (curr_res >> core#BIT) & 1
@@ -735,9 +727,9 @@ PUB MagScale(scale): curr_scl   'XXX revisit - return value doesn't match either
 '   NOTE: The magnetometer has only one full-scale range. This method is provided primarily for API compatibility with other IMUs
     case magadcres(-2)
         14:
-            _mres := 5_997
+            longfill(@_mres, 5_997, MAG_DOF)
         16:
-            _mres := 1_499
+            longfill(@_mres, 1_499, MAG_DOF)
 
     return 48
 
@@ -784,14 +776,6 @@ PUB MagOpMode(mode): curr_mode | tmp
     writereg(core#CNTL1, 1, @tmp)               ' power down state
     time.msleep(100)                            ' wait 100ms first
     writereg(core#CNTL1, 1, @mode)              ' switch to the selected mode
-
-PUB MagWord2Gauss(mag_word): mag_gauss
-' Convert magnetometer ADC word to Gauss
-    return (mag_word * _mres)
-
-PUB MagWord2Tesla(mag_word): mag_tesla
-' Convert magnetometer ADC word to Teslas
-    return (mag_word *_mres) / 10_000
 
 PUB MeasureMag{}
 ' Perform magnetometer measurement
