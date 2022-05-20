@@ -35,7 +35,7 @@ P2/SPIN2:
 
 * P1/SPIN1 FlexSpin (bytecode): OK, tested with 5.9.10-beta
 * P1/SPIN1 FlexSpin (native): OK, tested with 5.9.10-beta
-* P2/SPIN2 FlexSpin (nu-code): Untested
+* P2/SPIN2 FlexSpin (nu-code): FTBFS, tested with 5.9.10-beta
 * P2/SPIN2 FlexSpin (native): OK, tested with 5.9.10-beta
 * P1/SPIN1 OpenSpin (bytecode): Untested (deprecated)
 * ~~BST~~ (incompatible - no preprocessor)
