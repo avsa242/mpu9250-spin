@@ -5,10 +5,13 @@
     Description: Demo of the MPU9250 driver
     Copyright (c) 2022
     Started Sep 2, 2019
-    Updated May 20, 2022
+    Updated May 29, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
+' Comment out the following line to use custom I/O pins below
+#include "core.con.click.spin2"
+
 CON
 
     _clkfreq    = cfg._clkfreq_def
@@ -18,8 +21,14 @@ CON
     LED         = cfg.LED1
     SER_BAUD    = 2_000_000
 
-    SCL_PIN     = 8'0
-    SDA_PIN     = 9'1
+    CLICK_BASE  = 0                             ' 0, 16, 32, 48
+
+#ifndef MIKROE_CLICK
+    { comment out the #include line above to define your own I/O pins here }
+    SCL_PIN     = 0
+    SDA_PIN     = 1
+#endif
+
     I2C_HZ      = 400_000
 ' --
 
