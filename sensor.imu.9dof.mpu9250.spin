@@ -99,8 +99,12 @@ VAR
     byte _temp_scale
 
 OBJ
-
-    i2c : "com.i2c"
+{ decide: Bytecode I2C engine, or PASM? Default is PASM if BC isn't specified }
+#ifdef MPU9250_I2C_BC
+    i2c : "com.i2c.nocog"                       ' BC I2C engine
+#else
+    i2c : "com.i2c"                             ' PASM I2C engine
+#endif
     core: "core.con.mpu9250"
     time: "time"
 
