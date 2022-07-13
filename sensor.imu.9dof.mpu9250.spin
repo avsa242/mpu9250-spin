@@ -847,6 +847,7 @@ PUB XLGDataRate(rate): curr_rate
 PUB XLGDataReady{}: flag
 ' Flag indicating new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
+    flag := 0
     readreg(core#INT_STATUS, 1, @flag)
     return ((flag & 1) == 1)
 
