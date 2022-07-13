@@ -5,7 +5,7 @@
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2022
     Started Sep 2, 2019
-    Updated Apr 24, 2021
+    Updated Jul 13, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -93,9 +93,7 @@ CON
 
 VAR
 
-    long _mag_bias[MAG_DOF]
     long _abias_fact[ACCEL_DOF]
-    long _ares, _gres, _mres[MAG_DOF]
     byte _mag_sens_adj[MAG_DOF]
     byte _temp_scale
 
@@ -148,7 +146,7 @@ PUB Defaults{}
 '   DisableI2CMaster() _afterwards_ if you wish to read the magnetometer
 '   through the same I2C bus as the Accel & Gyro
 
-PUB Preset_XL_G_M{}
+PUB Preset_Active{}
 ' Like Defaults(), but
 '   * sets up the MPU9250 to pass the magnetometer data through the same
 '       I2C bus as the Accel and Gyro data
@@ -657,13 +655,13 @@ PUB MagBias(ptr_x, ptr_y, ptr_z, rw)
 '               Pointers to variables to hold current settings for respective axes
     case rw
         W:
-            _mag_bias[X_AXIS] := ptr_x
-            _mag_bias[Y_AXIS] := ptr_y
-            _mag_bias[Z_AXIS] := ptr_z
+            _mbias[X_AXIS] := ptr_x
+            _mbias[Y_AXIS] := ptr_y
+            _mbias[Z_AXIS] := ptr_z
         R:
-            long[ptr_x] := _mag_bias[X_AXIS]
-            long[ptr_y] := _mag_bias[Y_AXIS]
-            long[ptr_z] := _mag_bias[Z_AXIS]
+            long[ptr_x] := _mbias[X_AXIS]
+            long[ptr_y] := _mbias[Y_AXIS]
+            long[ptr_z] := _mbias[Z_AXIS]
         other:
             return
 
@@ -674,9 +672,9 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
                                                 ' an extra (required) read of
                                                 ' the status register
 
-    tmp.word[X_AXIS] -= _mag_bias[X_AXIS]
-    tmp.word[Y_AXIS] -= _mag_bias[Y_AXIS]
-    tmp.word[Z_AXIS] -= _mag_bias[Z_AXIS]
+    tmp.word[X_AXIS] -= _mbias[X_AXIS]
+    tmp.word[Y_AXIS] -= _mbias[Y_AXIS]
+    tmp.word[Z_AXIS] -= _mbias[Z_AXIS]
     long[ptr_x] := ~~tmp.word[X_AXIS] * _mag_sens_adj[X_AXIS]
     long[ptr_y] := ~~tmp.word[Y_AXIS] * _mag_sens_adj[Y_AXIS]
     long[ptr_z] := ~~tmp.word[Z_AXIS] * _mag_sens_adj[Z_AXIS]
