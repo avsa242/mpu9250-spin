@@ -24,6 +24,7 @@ CON
     DEF_SCL             = 28
     DEF_SDA             = 29
     DEF_HZ              = 100_000
+    DEF_ADDR            = 0
     I2C_MAX_FREQ        = core#I2C_MAX_FREQ
 
     X_AXIS              = 0
@@ -108,14 +109,15 @@ PUB Null{}
 
 PUB Start{}: status
 ' Start using "standard" Propeller I2C pins and 100kHz
-    return startx(DEF_SCL, DEF_SDA, DEF_HZ)
+    return startx(DEF_SCL, DEF_SDA, DEF_HZ, DEF_ADDR)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ): status
+PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 ' Start using custom I/O pins and I2C bus speed
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
 }   I2C_HZ =< core#I2C_MAX_FREQ
         if (status := i2c.init(SCL_PIN, SDA_PIN, I2C_HZ))
             time.usleep(core#TREGRW)            ' startup time
+            _addr_bits := (ADDR_BITS << 1)
             ' setup to read the magnetometer from the same bus as XL & G
             disablei2cmaster{}
             if deviceid{} == core#DEVID_RESP
@@ -868,16 +870,18 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 }       core#ZG_OFFS_USR, core#XA_OFFS_H, core#YA_OFFS_H, core#ZA_OFFS_H, {
 }       core#ACCEL_XOUT_H..core#ACCEL_ZOUT_L, {
 }       core#GYRO_XOUT_H..core#GYRO_ZOUT_L, core#TEMP_OUT_H:
-            cmd_pkt.byte[0] := SLAVE_XLG_WR     ' Accel/Gyro regs
+            { accel/gyro regs }
+            cmd_pkt.byte[0] := (SLAVE_XLG_WR | _addr_bits)
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wrblock_lsbf(@cmd_pkt, 2)
             i2c.start{}
-            i2c.write(SLAVE_XLG_RD)
+            i2c.write(SLAVE_XLG_RD | _addr_bits)
             i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c#NAK)
             i2c.stop{}
         core#HXL, core#HYL, core#HZL, core#WIA..core#ASTC, core#I2CDIS..core#ASAZ:
-            cmd_pkt.byte[0] := SLAVE_MAG_WR     ' Mag regs
+            { mag regs }
+            cmd_pkt.byte[0] := SLAVE_MAG_WR
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wrblock_lsbf(@cmd_pkt, 2)
@@ -898,14 +902,16 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 }       core#I2C_SLV0_DO..core#PWR_MGMT_2, core#FIFO_COUNTH..core#FIFO_R_W,{
 }       core#XG_OFFS_USR, core#YG_OFFS_USR, core#ZG_OFFS_USR, core#XA_OFFS_H,{
 }       core#YA_OFFS_H, core#ZA_OFFS_H:
-            cmd_pkt.byte[0] := SLAVE_XLG_WR     ' Accel/Gyro regs
+            { accel/gyro regs }
+            cmd_pkt.byte[0] := (SLAVE_XLG_WR | _addr_bits)
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wrblock_lsbf(@cmd_pkt, 2)
             i2c.wrblock_msbf(ptr_buff, nr_bytes)
             i2c.stop{}
         core#CNTL1..core#ASTC, core#I2CDIS:
-            cmd_pkt.byte[0] := SLAVE_MAG_WR     ' Mag regs
+            { mag regs }
+            cmd_pkt.byte[0] := SLAVE_MAG_WR
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start{}
             i2c.wrblock_lsbf(@cmd_pkt, 2)
