@@ -1,11 +1,11 @@
 {
     --------------------------------------------
-    Filename: sensor.imu.9dof.mpu9250.i2c.spin
+    Filename: sensor.imu.9dof.mpu9250.spin
     Author: Jesse Burt
     Description: Driver for the InvenSense MPU9250
     Copyright (c) 2022
     Started Sep 2, 2019
-    Updated Jul 13, 2022
+    Updated Sep 21, 2022
     See end of file for terms of use.
     --------------------------------------------
 }
@@ -108,14 +108,14 @@ OBJ
     core: "core.con.mpu9250"
     time: "time"
 
-PUB Null{}
+PUB null{}
 ' This is not a top-level object
 
-PUB Start{}: status
+PUB start{}: status
 ' Start using "standard" Propeller I2C pins and 100kHz
     return startx(DEF_SCL, DEF_SDA, DEF_HZ, DEF_ADDR)
 
-PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
+PUB startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
 ' Start using custom I/O pins and I2C bus speed
     if lookdown(SCL_PIN: 0..31) and lookdown(SDA_PIN: 0..31) and {
 }   I2C_HZ =< core#I2C_MAX_FREQ
@@ -133,11 +133,13 @@ PUB Startx(SCL_PIN, SDA_PIN, I2C_HZ, ADDR_BITS): status
     ' Lastly - make sure you have at least one free core/cog
     return FALSE
 
-PUB Stop{}
-' Stop/deinitialize driver
+PUB stop{}
+' Stop the driver
     i2c.deinit{}
+    longfill(@_abias_fact, 0, 3)
+    bytefill(@_mag_sens_adj, 0, 4)
 
-PUB Defaults{}
+PUB defaults{}
 ' Factory default settings
 {   ' This is what _would_ be set:
     accelscale(2)
@@ -152,7 +154,7 @@ PUB Defaults{}
 '   DisableI2CMaster() _afterwards_ if you wish to read the magnetometer
 '   through the same I2C bus as the Accel & Gyro
 
-PUB Preset_Active{}
+PUB preset_active{}
 ' Like Defaults(), but
 '   * sets up the MPU9250 to pass the magnetometer data through the same
 '       I2C bus as the Accel and Gyro data
@@ -171,7 +173,7 @@ PUB Preset_Active{}
     magscale(16)
     tempscale(C)
 
-PUB AccelAxisEnabled(xyz_mask): curr_mask
+PUB accelaxisenabled(xyz_mask): curr_mask
 ' Enable data output for Accelerometer - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
@@ -192,7 +194,7 @@ PUB AccelAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#DIS_XYZA_MASK) | xyz_mask)
     writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[ACCEL_DOF]
+PUB accelbias(ptr_x, ptr_y, ptr_z, rw) | tmp[ACCEL_DOF]
 ' Read or write/manually set accelerometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -223,7 +225,7 @@ PUB AccelBias(ptr_x, ptr_y, ptr_z, rw) | tmp[ACCEL_DOF]
         other:
             return
 
-PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
+PUB acceldata(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read accelerometer data
     tmp := 0
     readreg(core#ACCEL_XOUT_H, 6, @tmp)
@@ -232,21 +234,21 @@ PUB AccelData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
-PUB AccelDataOverrun{}
+PUB acceldataoverrun{}
 ' dummy method
 
-PUB AccelDataRate(rate): curr_rate
+PUB acceldatarate(rate): curr_rate
 ' Set accelerometer output data rate, in Hz
 '   Valid values: 4..1000
 '   Any other value polls the chip and returns the current setting
     return xlgdatarate(rate)
 
-PUB AccelDataReady{}: flag
+PUB acceldataready{}: flag
 ' Flag indicating new accelerometer data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return xlgdataready{}
 
-PUB AccelLowPassFilter(freq): curr_freq | lpf_byp_bit
+PUB accellowpassfilter(freq): curr_freq | lpf_byp_bit
 ' Set accelerometer output data low-pass filter cutoff frequency, in Hz
 '   Valid values: 0 (disable), 5, 10, 20, 42, 98, 188
 '   Any other value polls the chip and returns the current setting
@@ -268,7 +270,7 @@ PUB AccelLowPassFilter(freq): curr_freq | lpf_byp_bit
 }   freq | lpf_byp_bit
     writereg(core#ACCEL_CFG2, 1, @freq)
 
-PUB AccelScale(g): curr_scl
+PUB accelscale(g): curr_scl
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
@@ -286,7 +288,7 @@ PUB AccelScale(g): curr_scl
     g := ((curr_scl & core#ACCEL_FS_SEL_MASK) | g) & core#ACCEL_CFG_MASK
     writereg(core#ACCEL_CFG, 1, @g)
 
-PUB ClockSource(src): curr_src
+PUB clocksource(src): curr_src
 ' Set sensor clock source
 '   Valid values:
 '       INT20 (0): Internal 20MHz oscillator
@@ -302,14 +304,14 @@ PUB ClockSource(src): curr_src
     src := (curr_src & core#CLKSEL_MASK) | src
     writereg(core#PWR_MGMT_1, 1, @src)
 
-PUB DeviceID{}: id
+PUB deviceid{}: id
 ' Read device ID
 '   Returns: AK8963 ID (LSB), MPU9250 ID (MSB)
     id := 0
     readreg(core#WIA, 1, @id.byte[0])
     readreg(core#WHO_AM_I, 1, @id.byte[1])
 
-PUB DisableI2CMaster{} | tmp
+PUB disablei2cmaster{} | tmp
 ' Disable on-chip I2C master
 '   NOTE: Used to setup to read the magnetometer from the same bus as
 '       accelerometer and gyroscope
@@ -318,7 +320,7 @@ PUB DisableI2CMaster{} | tmp
     tmp := ((tmp & core#BYPASS_EN_MASK) | (1 << core#BYPASS_EN)) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @tmp)
 
-PUB FIFOEnabled(state): curr_state
+PUB fifoenabled(state): curr_state
 ' Enable the FIFO
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -333,14 +335,14 @@ PUB FIFOEnabled(state): curr_state
         other:
             return (((curr_state >> core#FIFOEN) & 1) == 1)
 
-PUB FIFOFull{}: flag
+PUB fifofull{}: flag
 ' Flag indicating FIFO is full
 '   Returns: TRUE (-1) if FIFO is full, FALSE (0) otherwise
 '   NOTE: If this flag is set, the oldest data has already been dropped from the FIFO
     readreg(core#INT_STATUS, 1, @flag)
     return (((flag >> core#FIFO_OVERFL_INT) & 1) == 1)
 
-PUB FIFOMode(mode): curr_mode
+PUB fifomode(mode): curr_mode
 ' Set FIFO mode
 '   Valid values:
 '       BYPASS (0): FIFO disabled
@@ -369,16 +371,16 @@ PUB FIFOMode(mode): curr_mode
     mode := (curr_mode & core#FIFO_MODE_MASK) | mode
     writereg(core#CONFIG, 1, @mode)
 
-PUB FIFORead(nr_bytes, ptr_data)
+PUB fiforead(nr_bytes, ptr_data)
 ' Read FIFO data
     readreg(core#FIFO_R_W, nr_bytes, ptr_data)
 
-PUB FIFOReset{} | tmp
+PUB fiforeset{} | tmp
 ' Reset the FIFO    XXX - expand..what exactly does it do?
     tmp := 1 << core#FIFO_RST
     writereg(core#USER_CTRL, 1, @tmp)
 
-PUB FIFOSource(mask): curr_mask
+PUB fifosource(mask): curr_mask
 ' Set FIFO source data, as a bitmask
 '   Valid values:
 '       Bits: 76543210
@@ -401,12 +403,12 @@ PUB FIFOSource(mask): curr_mask
             readreg(core#FIFO_EN, 1, @curr_mask)
             return
 
-PUB FIFOUnreadSamples{}: nr_samples
+PUB fifounreadsamples{}: nr_samples
 ' Number of unread samples stored in FIFO
 '   Returns: unsigned 13bit
     readreg(core#FIFO_COUNTH, 2, @nr_samples)
 
-PUB FSYNCActiveState(state): curr_state
+PUB fsyncactivestate(state): curr_state
 ' Set FSYNC pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
@@ -421,7 +423,7 @@ PUB FSYNCActiveState(state): curr_state
     state := ((curr_state & core#ACTL_FSYNC_MASK) | state) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @state)
 
-PUB GyroAxisEnabled(xyz_mask): curr_mask
+PUB gyroaxisenabled(xyz_mask): curr_mask
 ' Enable data output for Gyroscope - per axis
 '   Valid values: 0 or 1, for each axis:
 '       Bits    210
@@ -440,7 +442,7 @@ PUB GyroAxisEnabled(xyz_mask): curr_mask
     xyz_mask := ((curr_mask & core#DIS_XYZG_MASK) | xyz_mask)
     writereg(core#PWR_MGMT_2, 1, @xyz_mask)
 
-PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[GYRO_DOF]
+PUB gyrobias(ptr_x, ptr_y, ptr_z, rw) | tmp[GYRO_DOF]
 ' Read or write/manually set gyroscope calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -470,7 +472,7 @@ PUB GyroBias(ptr_x, ptr_y, ptr_z, rw) | tmp[GYRO_DOF]
         other:
             return
 
-PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
+PUB gyrodata(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read gyro data
     tmp := 0
     readreg(core#GYRO_XOUT_H, 6, @tmp)
@@ -479,21 +481,21 @@ PUB GyroData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[1]
     long[ptr_z] := ~~tmp.word[0]
 
-PUB GyroDataOverrun{}
+PUB gyrodataoverrun{}
 ' dummy method
 
-PUB GyroDataRate(rate): curr_rate
+PUB gyrodatarate(rate): curr_rate
 ' Set gyroscope output data rate, in Hz
 '   Valid values: 4..1000
 '   Any other value polls the chip and returns the current setting
     return xlgdatarate(rate)
 
-PUB GyroDataReady{}: flag
+PUB gyrodataready{}: flag
 ' Flag indicating new gyroscope data available
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     return xlgdataready{}
 
-PUB GyroLowPassFilter(freq): curr_freq | lpf_byp_bits
+PUB gyrolowpassfilter(freq): curr_freq | lpf_byp_bits
 ' Set gyroscope output data low-pass filter cutoff frequency, in Hz
 '   Valid values: 5, 10, 20, 42, 98, 188
 '   Any other value polls the chip and returns the current setting
@@ -519,7 +521,7 @@ PUB GyroLowPassFilter(freq): curr_freq | lpf_byp_bits
     writereg(core#CONFIG, 1, @freq)
     writereg(core#GYRO_CFG, 1, @lpf_byp_bits)
 
-PUB GyroScale(scale): curr_scl
+PUB gyroscale(scale): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
 '   Any other value polls the chip and returns the current setting
@@ -537,7 +539,7 @@ PUB GyroScale(scale): curr_scl
     scale := ((curr_scl & core#GYRO_FS_SEL_MASK) | scale)
     writereg(core#GYRO_CFG, 1, @scale)
 
-PUB IntActiveState(state): curr_state
+PUB intactivestate(state): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
@@ -552,7 +554,7 @@ PUB IntActiveState(state): curr_state
     state := ((curr_state & core#ACTL_MASK) | state) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @state)
 
-PUB IntClearedBy(mode): curr_mode
+PUB intclearedby(mode): curr_mode
 ' Select mode by which interrupt status may be cleared
 '   Valid values:
 '      *READ_INT_FLAG (0): Only by reading interrupt flags
@@ -569,7 +571,7 @@ PUB IntClearedBy(mode): curr_mode
     mode := ((curr_mode & core#INT_ANYRD_2CLR_MASK) | mode) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @mode)
 
-PUB Interrupt{}: flag
+PUB interrupt{}: flag
 ' Indicates one or more interrupts have been asserted
 '   Returns: non-zero result if any interrupts have been asserted:
 '       INT_WAKE_ON_MOTION (64) - Wake on motion interrupt occurred
@@ -579,7 +581,7 @@ PUB Interrupt{}: flag
     flag := 0
     readreg(core#INT_STATUS, 1, @flag)
 
-PUB IntLatchEnabled(state): curr_state
+PUB intlatchenabled(state): curr_state
 ' Latch interrupt pin when interrupt asserted
 '   Valid values:
 '      *FALSE (0): Interrupt pin is pulsed (width = 50uS)
@@ -596,7 +598,7 @@ PUB IntLatchEnabled(state): curr_state
     state := ((curr_state & core#LATCH_INT_EN_MASK) | state) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @state)
 
-PUB IntMask(mask): curr_mask
+PUB intmask(mask): curr_mask
 ' Allow interrupts to assert INT pin, set by mask, or by ORing together symbols shown below
 '   Valid values:
 '       Bits: %x6x43xx0 (bit positions marked 'x' aren't supported by the device; setting any of them to '1' will be considered invalid and will query the current setting, instead)
@@ -615,7 +617,7 @@ PUB IntMask(mask): curr_mask
             readreg(core#INT_ENABLE, 1, @curr_mask)
             return curr_mask & core#INT_ENABLE_MASK
 
-PUB IntOutputType(mode): curr_mode
+PUB intoutputtype(mode): curr_mode
 ' Set interrupt pin output mode
 '   Valid values:
 '      *INT_PP (0): Push-pull
@@ -632,7 +634,7 @@ PUB IntOutputType(mode): curr_mode
     mode := ((curr_mode & core#OPEN_MASK) | mode) & core#INT_BYPASS_CFG_MASK
     writereg(core#INT_BYPASS_CFG, 1, @mode)
 
-PUB MagADCRes(bits): curr_res | tmp
+PUB magadcres(bits): curr_res | tmp
 ' Set magnetometer ADC resolution, in bits
 '   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
@@ -651,7 +653,7 @@ PUB MagADCRes(bits): curr_res | tmp
     bits := ((curr_res & core#BIT_MASK) | bits)
     writereg(core#CNTL1, 1, @bits)
 
-PUB MagBias(ptr_x, ptr_y, ptr_z, rw)
+PUB magbias(ptr_x, ptr_y, ptr_z, rw)
 ' Read or write/manually set magnetometer calibration offset values
 '   Valid values:
 '       When rw == W (1, write)
@@ -671,7 +673,7 @@ PUB MagBias(ptr_x, ptr_y, ptr_z, rw)
         other:
             return
 
-PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
+PUB magdata(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read Magnetometer data
     tmp := 0
     readreg(core#HXL, 7, @tmp)                  ' Read 6 mag data bytes, plus
@@ -685,14 +687,14 @@ PUB MagData(ptr_x, ptr_y, ptr_z) | tmp[2]
     long[ptr_y] := ~~tmp.word[Y_AXIS] * _mag_sens_adj[Y_AXIS]
     long[ptr_z] := ~~tmp.word[Z_AXIS] * _mag_sens_adj[Z_AXIS]
 
-PUB MagDataOverrun{}: flag
+PUB magdataoverrun{}: flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
     flag := 0
     readreg(core#ST1, 1, @flag)
     return (((flag >> core#DOR) & 1) == 1)
 
-PUB MagDataRate(rate): curr_rate
+PUB magdatarate(rate): curr_rate
 ' Set magnetometer output data rate, in Hz
 '   Valid values: 8, 100
 '   Any other value polls the chip and returns the current setting
@@ -709,14 +711,14 @@ PUB MagDataRate(rate): curr_rate
                 CONT100:
                     return 100
 
-PUB MagDataReady{}: flag
+PUB magdataready{}: flag
 ' Flag indicating new magnetometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     flag := 0
     readreg(core#ST1, 1, @flag)
     return ((flag & 1) == 1)
 
-PUB MagOverflow{}: flag
+PUB magoverflow{}: flag
 ' Flag indicating magnetometer measurement has overflowed
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
 '   NOTE: If this flag is TRUE, measurement data should not be trusted
@@ -725,7 +727,7 @@ PUB MagOverflow{}: flag
     readreg(core#ST2, 1, @flag)
     return (((flag >> core#HOFL) & 1) == 1)
 
-PUB MagScale(scale): curr_scl   'XXX revisit - return value doesn't match either possible param
+PUB magscale(scale): curr_scl   'XXX revisit - return value doesn't match either possible param
 ' Set full-scale range of magnetometer, in Gauss
 '   Valid values: 48
 '   NOTE: The magnetometer has only one full-scale range. This method is provided primarily for API compatibility with other IMUs
@@ -737,7 +739,7 @@ PUB MagScale(scale): curr_scl   'XXX revisit - return value doesn't match either
 
     return 48
 
-PUB MagSelfTestEnabled(state): curr_state
+PUB magselftestenabled(state): curr_state
 ' Enable magnetometer self-test mode (generates magnetic field)
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
@@ -752,12 +754,12 @@ PUB MagSelfTestEnabled(state): curr_state
     state := (curr_state & core#SELF_MASK) | state
     writereg(core#ASTC, 1, @state)
 
-PUB MagSoftReset{} | tmp
+PUB magsoftreset{} | tmp
 ' Perform soft-reset of magnetometer: initialize all registers
     tmp := core#SOFT_RST
     writereg(core#CNTL2, 1, @tmp)
 
-PUB MagOpMode(mode): curr_mode | tmp
+PUB magopmode(mode): curr_mode | tmp
 ' Set magnetometer operating mode
 '   Valid values:
 '      *POWERDOWN (0): Power down
@@ -781,11 +783,11 @@ PUB MagOpMode(mode): curr_mode | tmp
     time.msleep(100)                            ' wait 100ms first
     writereg(core#CNTL1, 1, @mode)              ' switch to the selected mode
 
-PUB MeasureMag{}
+PUB measuremag{}
 ' Perform magnetometer measurement
     magopmode(SINGLE)
 
-PUB ReadMagAdj{}
+PUB readmagadj{}
 ' Read magnetometer factory sensitivity adjustment values
     magopmode(FUSEACCESS)
     readreg(core#ASAX, 3, @_mag_sens_adj)
@@ -797,12 +799,12 @@ PUB ReadMagAdj{}
     _mag_sens_adj[Z_AXIS] := ((((((_mag_sens_adj[Z_AXIS] * 1000) - 128_000){
 }   / 2) / 128) + 1_000)) / 1000
 
-PUB Reset{}
+PUB reset{}
 ' Perform soft-reset
     magsoftreset{}
     xlgsoftreset{}
 
-PUB TempDataRate(rate): curr_rate
+PUB tempdatarate(rate): curr_rate
 ' Set temperature output data rate, in Hz
 '   Valid values: 4..1000
 '   Any other value polls the chip and returns the current setting
@@ -810,7 +812,7 @@ PUB TempDataRate(rate): curr_rate
 '   (hardware limitation)
     return xlgdatarate(rate)
 
-PUB Temperature{}: temp
+PUB temperature{}: temp
 ' Read temperature, in hundredths of a degree
     temp := 0
     readreg(core#TEMP_OUT_H, 2, @temp)
@@ -819,7 +821,7 @@ PUB Temperature{}: temp
         other:
             return ((temp * 1_0000) / 333_87) + 21_00 'XXX unverified
 
-PUB TempScale(scale): curr_scl
+PUB tempscale(scale): curr_scl
 ' Set temperature scale used by Temperature method
 '   Valid values:
 '       C (0): Celsius
@@ -831,7 +833,7 @@ PUB TempScale(scale): curr_scl
         other:
             return _temp_scale
 
-PUB XLGDataRate(rate): curr_rate
+PUB xlgdatarate(rate): curr_rate
 ' Set accelerometer/gyro/temp sensor output data rate, in Hz
 '   Valid values: 4..1000
 '   Any other value polls the chip and returns the current setting
@@ -844,26 +846,26 @@ PUB XLGDataRate(rate): curr_rate
             readreg(core#SMPLRT_DIV, 1, @curr_rate)
             return 1000 / (curr_rate + 1)
 
-PUB XLGDataReady{}: flag
+PUB xlgdataready{}: flag
 ' Flag indicating new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
     flag := 0
     readreg(core#INT_STATUS, 1, @flag)
     return ((flag & 1) == 1)
 
-PUB XLGLowPassFilter(freq): curr_freq
+PUB xlglowpassfilter(freq): curr_freq
 ' Set accel/gyro/temp sensor low-pass filter cutoff frequency, in Hz
 '   Valid values: 5, 10, 20, 42, 98, 188
 '   Any other value polls the chip and returns the current setting (accel in lower word, gyro in upper word)
     curr_freq.word[0] := accellowpassfilter(freq)
     curr_freq.word[1] := gyrolowpassfilter(freq)
 
-PUB XLGSoftReset{} | tmp
+PUB xlgsoftreset{} | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
     tmp := core#XLG_SOFT_RST
     writereg(core#PWR_MGMT_1, 1, @tmp)
 
-PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Read nr_bytes from the slave device ptr_buff
     case reg_nr                                 ' validate reg
         core#SELF_TEST_X_GYRO..core#SELF_TEST_Z_GYRO, {
@@ -897,7 +899,7 @@ PRI readReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
         other:
             return
 
-PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
+PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 ' Write nr_bytes to the slave device from ptr_buff
     case reg_nr                                 ' validate reg
         core#SELF_TEST_X_GYRO..core#SELF_TEST_Z_GYRO,{
@@ -928,23 +930,21 @@ PRI writeReg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
 
 DAT
 {
-TERMS OF USE: MIT License
+Copyright 2022 Jesse Burt
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
+associated documentation files (the "Software"), to deal in the Software without restriction,
+including without limitation the rights to use, copy, modify, merge, publish, distribute,
+sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is
 furnished to do so, subject to the following conditions:
 
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
+The above copyright notice and this permission notice shall be included in all copies or
+substantial portions of the Software.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT
+NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 }
+
