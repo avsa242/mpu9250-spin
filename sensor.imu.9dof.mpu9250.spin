@@ -49,10 +49,6 @@ CON
     CAL_G_DR            = 400
     CAL_M_DR            = 100
 
-' Bias adjustment (AccelBias(), GyroBias(), MagBias()) read or write
-    R                   = 0
-    W                   = 1
-
 ' Magnetometer operating modes
     POWERDOWN           = %0000
     SINGLE              = %0001
@@ -144,17 +140,13 @@ PUB stop{}
 
 PUB defaults{}
 ' Factory default settings
-{   ' This is what _would_ be set:
-    accelscale(2)
-    gyroscale(250)
-    mag_opmode(CONT100)
-    magscale(16)
-    tempscale(C)
-}
-' to save code space, just perform soft-reset, instead:
+'   * accel scale: 2g
+'   * gyro scale: 250dps
+'   * mag scale: 16Gs
+'   * temp scale: Celsius
     reset{}
-' NOTE: If you ever call this method in your code, you _must_ call
-'   DisableI2CMaster() _afterwards_ if you wish to read the magnetometer
+' NOTE: If you ever call reset() in your code, you _must_ call
+'   i2c_mast_dis() _afterwards_ if you wish to read the magnetometer
 '   through the same I2C bus as the Accel & Gyro
 
 PUB preset_active{}
@@ -168,9 +160,9 @@ PUB preset_active{}
     rd_mag_sens_adj{}
 
     ' the registers modified by the following are actually changed by the call
-    ' to Reset() above, but they need to be called explicitly to set the
+    ' to reset() above, but they need to be called explicitly to set the
     ' scaling factors used by the calculated output data methods
-    ' AccelG(), GyroDPS(), and MagGauss()
+    ' accel_g(), gyro_dps(), and mag_gauss()
     accel_scale(2)
     gyro_scale(250)
     mag_scale(16)
@@ -325,7 +317,7 @@ PUB fifo_ena(state): curr_state
 ' Enable the FIFO
 '   Valid values: TRUE (-1 or 1), FALSE (0)
 '   Any other value polls the chip and returns the current setting
-'   NOTE: FALSE disables the interface to the FIFO, but the chip will still write data to it, if FIFO data sources are defined with FIFOSource()
+'   NOTE: FALSE disables the interface to the FIFO, but the chip will still write data to it, if FIFO data sources are defined with fifo_src()
     curr_state := 0
     readreg(core#USER_CTRL, 1, @curr_state)
     case ||(state)
@@ -350,7 +342,7 @@ PUB fifo_mode(mode): curr_mode
 '       STREAM (1): FIFO enabled; when full, new data overwrites old data
 '       FIFO (2): FIFO enabled; when full, no new data will be written to FIFO
 '   Any other value polls the chip and returns the current setting
-'   NOTE: If no data sources are set using FIFOSource(), the current mode returned will be BYPASS (0), regardless of what the mode was previously set to
+'   NOTE: If no data sources are set using fifo_src(), the current mode returned will be BYPASS (0), regardless of what the mode was previously set to
     curr_mode := 0
     readreg(core#CONFIG, 1, @curr_mode)
     case mode
@@ -360,7 +352,7 @@ PUB fifo_mode(mode): curr_mode
         STREAM, FIFO:
             mode := lookdownz(mode: STREAM, FIFO) << core#FIFO_MODE
         other:
-            ' Check if a mask has been set with FIFOSource(); return
+            ' Check if a mask has been set with fifo_src(); return
             '   either STREAM or FIFO as the current mode, as applicable
             ' If not, just return BYPASS (0), as anything else
             '   doesn't make sense
