@@ -1,73 +1,66 @@
 {
-    --------------------------------------------
-    Filename: MPU9250-Demo.spin
-    Author: Jesse Burt
-    Description: MPU9250 driver demo
+----------------------------------------------------------------------------------------------------
+    Filename:       MPU9250-Demo.spin
+    Description:    Demo of the MPU9250 driver
         * 9DoF data output
-    Copyright (c) 2022
-    Started Aug 12, 2017
-    Updated Nov 26, 2022
-    See end of file for terms of use.
-    --------------------------------------------
-
-    Build-time symbols supported by driver:
-        -DMPU9250_I2C (default if none specified)
-        -DMPU9250_I2C_BC
+    Author:         Jesse Burt
+    Started:        Sep 3, 2019
+    Updated:        Aug 10, 2024
+    Copyright (c) 2024 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
+
+' Uncomment the two lines below to use the bytecode-based I2C engine
+'#define MPU9250_I2C_BC
+'#pragma exportdef(MPU9250_I2C_BC)
+
 CON
 
-    _clkmode    = cfg#_clkmode
-    _xinfreq    = cfg#_xinfreq
+    _clkmode    = cfg._clkmode
+    _xinfreq    = cfg._xinfreq
 
-' -- User-modifiable constants
-    SER_BAUD    = 115_200
-
-    { I2C configuration }
-    SCL_PIN     = 28
-    SDA_PIN     = 29
-    I2C_FREQ    = 400_000
-    ADDR_BITS   = 0
-' --
 
 OBJ
 
-    cfg: "boardcfg.flip"
-    sensor: "sensor.imu.9dof.mpu9250"
-    ser: "com.serial.terminal.ansi"
-    time: "time"
+    cfg:    "boardcfg.flip"
+    time:   "time"
+    ser:    "com.serial.terminal.ansi" | SER_BAUD=115_200
+    sensor: "sensor.imu.9dof.mpu9250" | SCL=28, SDA=29, I2C_FREQ=400_000, I2C_ADDR=0
 
-PUB setup{}
 
-    ser.start(SER_BAUD)
-    time.msleep(10)
-    ser.clear{}
-    ser.strln(string("Serial terminal started"))
+PUB setup()
 
-    if (sensor.startx(SCL_PIN, SDA_PIN, I2C_FREQ, ADDR_BITS))
-        ser.strln(string("MPU9250 driver started"))
+    ser.start()
+    time.msleep(30)
+    ser.clear()
+    ser.strln(@"Serial terminal started")
+
+    if ( sensor.start() )
+        ser.strln(@"MPU9250 driver started")
     else
-        ser.strln(string("MPU9250 driver failed to start - halting"))
+        ser.strln(@"MPU9250 driver failed to start - halting")
         repeat
 
-    sensor.preset_active{}
+    sensor.preset_active()
 
     repeat
         ser.pos_xy(0, 3)
-        show_accel_data{}
-        show_gyro_data{}
-        show_mag_data{}
-        if (ser.rx_check{} == "c")
-            cal_accel{}
-            cal_gyro{}
-            cal_mag{}
+        show_accel_data()
+        show_gyro_data()
+        show_mag_data()
+        if ( ser.getchar_noblock() == "c" )
+            cal_accel()
+            cal_gyro()
+            cal_mag()
 
-#include "acceldemo.common.spinh"
-#include "gyrodemo.common.spinh"
-#include "magdemo.common.spinh"
+#include "acceldemo.common.spinh"               ' use code common to all accelerometer,
+#include "gyrodemo.common.spinh"                '   gyroscope,
+#include "magdemo.common.spinh"                 '   and magnetometer demos
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2024 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
