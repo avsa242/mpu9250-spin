@@ -5,8 +5,8 @@
         * 9DoF data output
     Author:         Jesse Burt
     Started:        Jun 10, 2020
-    Updated:        Aug 10, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 10, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -14,8 +14,8 @@
 
 CON
 
-    _clkfreq    = cfg._clkfreq_def
-    _xtlfreq    = cfg._xtlfreq
+    _clkfreq    = 180_000_000
+    _xtlfreq    = 20_000_000
 
 ' -- User-modifiable constants
     CLICK_BASE  = 0                            ' MikroE Click base I/O pin
@@ -24,7 +24,6 @@ CON
 
 OBJ
 
-    cfg:    "boardcfg.p2eval"
     ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
 
     { MikroE Click boards (set CLICK_BASE pin above) }
@@ -32,6 +31,82 @@ OBJ
 
     { custom I/O settings }
 '    sensor: "sensor.imu.9dof.mpu9250" | SCL=0, SDA=1, I2C_FREQ=400_000, I2C_ADDR=0
+
+
+PUB main() | a[3], g[3], m[3]
+
+    setup()
+    sensor.preset_active()
+
+    repeat
+        repeat
+        until sensor.xlg_data_rdy()             ' wait for new accel/gyro data
+
+        ' copy accelerometer data (micro-g's) and gyroscope data (micro-degrees per second)
+        '   to arrays here
+        sensor.accel_g(@a[sensor.X_AXIS], @a[sensor.Y_AXIS], @a[sensor.Z_AXIS])
+        sensor.gyro_dps(@g[sensor.X_AXIS], @g[sensor.Y_AXIS], @g[sensor.Z_AXIS])
+
+        repeat
+        until sensor.mag_data_rdy()             ' wait for new mag data
+
+        ' copy magnetometer data (micro-Gauss) to an array here
+        sensor.mag_gauss(@m[sensor.X_AXIS], @m[sensor.Y_AXIS], @m[sensor.Z_AXIS])
+
+        ser.pos_xy(0, 3)
+        show_data(@"Accel (g):  ", a[sensor.X_AXIS], a[sensor.Y_AXIS], a[sensor.Z_AXIS])
+        show_data(@"Gyro (dps):  ", g[sensor.X_AXIS], g[sensor.Y_AXIS], g[sensor.Z_AXIS])
+        show_data(@"Mag (Gs):  ", m[sensor.X_AXIS], m[sensor.Y_AXIS], m[sensor.Z_AXIS])
+
+        if ( ser.getchar_noblock() == "c" )     ' press "c" to calibrate/zero the sensors
+            cal_accel()
+            cal_gyro()
+            cal_mag()
+
+
+PUB show_data(p_str, x, y, z) | axis, tmp[3], sign
+
+    longmove(@tmp, @x, 3)
+
+    ser.str(p_str)
+    repeat axis from 0 to 2
+        ' The sign is normally taken from the whole part and just displayed.
+        ' Because we're showing values divided by 1_000_000, it won't show negative until the value
+        '   reaches -1_000_000 or less, so values like -0_800_000 will display without the '-',
+        '   so process the sign display separately here
+        if ( tmp[axis] < 0 )
+            sign := "-"
+        else
+            sign := " "
+        ser.printf(@"%c%d.%06.6d     ", sign, ...
+                                        abs(tmp[axis] / 1_000_000), ...
+                                        abs(tmp[axis] // 1_000_000) )
+    ser.newline()
+
+
+PUB cal_accel()
+' Calibrate the accelerometer
+    ser.pos_xy(0, 3)
+    ser.str(@"Calibrating accelerometer...")
+    sensor.calibrate_accel()
+    ser.pos_xy(0, 3)
+    ser.clear_ln()
+
+PUB cal_gyro()
+' Calibrate the gyroscope
+    ser.pos_xy(0, 4)
+    ser.str(@"Calibrating gyroscope...")
+    sensor.calibrate_gyro()
+    ser.pos_xy(0, 4)
+    ser.clear_ln()
+
+PUB cal_mag()
+' Calibrate the magnetometer
+    ser.pos_xy(0, 5)
+    ser.str(@"Calibrating magnetometer...")
+    sensor.calibrate_mag()
+    ser.pos_xy(0, 5)
+    ser.clear_ln()
 
 
 PUB setup()
@@ -47,25 +122,10 @@ PUB setup()
         ser.strln(@"MPU9250 driver failed to start - halting")
         repeat
 
-    sensor.preset_active()
-
-    repeat
-        ser.pos_xy(0, 3)
-        show_accel_data()
-        show_gyro_data()
-        show_mag_data()
-        if ( ser.getchar_noblock() == "c" )
-            cal_accel()
-            cal_gyro()
-            cal_mag()
-
-#include "acceldemo.common.spin2h"              ' use code common to all accelerometer,
-#include "gyrodemo.common.spin2h"               '   gyroscope,
-#include "magdemo.common.spin2h"                '   and magnetometer demos
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

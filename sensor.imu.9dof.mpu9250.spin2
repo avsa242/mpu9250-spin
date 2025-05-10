@@ -9,9 +9,10 @@
 ----------------------------------------------------------------------------------------------------
 }
 
-#include "sensor.accel.common.spin2h"
-#include "sensor.gyroscope.common.spin2h"
-#include "sensor.magnetometer.common.spin2h"
+#include "sensor.accel.common.spin2h"           ' use code common to all accelerometers,
+#include "sensor.gyroscope.common.spin2h"       '   gyroscopes,
+#include "sensor.magnetometer.common.spin2h"    '   and magnetometers
+
 
 CON
 
@@ -724,11 +725,12 @@ PUB mag_scale(s=-2): cv   'XXX revisit - return value doesn't match either possi
             longfill(@_mres, 5_997, MAG_DOF)
         16:
             longfill(@_mres, 1_499, MAG_DOF)
+
     return 48
 
 
-PUB mag_self_test_ena(state=-2):r_state
-' Enable magnetometer self-test mode (generates magnetic field)v
+PUB mag_self_test_ena(s=-2): cv
+' Enable magnetometer self-test mode (generates magnetic field)
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
     cv := readreg(core.ASTC)

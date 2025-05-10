@@ -13,6 +13,7 @@
 #include "sensor.gyroscope.common.spinh"        '   gyroscopes,
 #include "sensor.magnetometer.common.spinh"     '   and magnetometers
 
+
 CON
 
     { default I/O configuration - these can be overridden by the parent object }
