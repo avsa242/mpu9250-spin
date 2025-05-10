@@ -18,7 +18,7 @@ CON
     _xtlfreq    = cfg._xtlfreq
 
 ' -- User-modifiable constants
-    CLICK_BASE  = 16                            ' MikroE Click base I/O pin
+    CLICK_BASE  = 0                            ' MikroE Click base I/O pin
 ' --
 
 
@@ -28,10 +28,10 @@ OBJ
     ser:    "com.serial.terminal.ansi" | SER_BAUD=2_000_000
 
     { MikroE Click boards (set CLICK_BASE pin above) }
-'    sensor: "sensor.imu.9dof.mpu9250" | SCL=SCL_PIN, SDA=SDA_PIN, I2C_FREQ=400_000, I2C_ADDR=0
+    sensor: "sensor.imu.9dof.mpu9250" | SCL=SCL_PIN, SDA=SDA_PIN, I2C_FREQ=400_000, I2C_ADDR=0
 
     { custom I/O settings }
-    sensor: "sensor.imu.9dof.mpu9250" | SCL=0, SDA=1, I2C_FREQ=400_000, I2C_ADDR=0
+'    sensor: "sensor.imu.9dof.mpu9250" | SCL=0, SDA=1, I2C_FREQ=400_000, I2C_ADDR=0
 
 
 PUB setup()

@@ -4,8 +4,8 @@
     Description:    Driver for the InvenSense MPU9250 IMU
     Author:         Jesse Burt
     Started:        Sep 2, 2019
-    Updated:        Aug 10, 2024
-    Copyright (c) 2024 - See end of file for terms of use.
+    Updated:        May 10, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
 ----------------------------------------------------------------------------------------------------
 }
 
@@ -189,15 +189,14 @@ PUB accel_axis_ena(xyz_mask=-2): curr_mask
 '       Bits    210
 '               XYZ
 '   Any other value polls the chip and returns the current setting
-    curr_mask := 0
-    readreg(core.PWR_MGMT_2, 1, @curr_mask)
+    curr_mask := readreg(core.PWR_MGMT_2)
     case xyz_mask
         %000..%111:
             ' invert bits because the logic in the chip is actually the reverse
             ' of the method name, i.e., a bit set to 1 _disables_ that axis
             xyz_mask := ((xyz_mask ^ core.DIS_INVERT) & core.DIS_XYZA_BITS) << core.DIS_XYZA
             xyz_mask := ((curr_mask & core.DIS_XYZA_MASK) | xyz_mask)
-            writereg(core.PWR_MGMT_2, 1, @xyz_mask)
+            writereg(core.PWR_MGMT_2, xyz_mask)
         other:
             return ((curr_mask >> core.DIS_XYZA) & core.DIS_XYZA_BITS) ^ core.DIS_INVERT
 
@@ -206,9 +205,9 @@ PUB accel_bias(x, y, z) | tmp[ACCEL_DOF]
 ' Read or write/manually set accelerometer calibration offset values
 '   x, y, z: pointers to copy offsets to
     longfill(@tmp, 0, ACCEL_DOF)
-    readreg(core.XA_OFFS_H, 2, @tmp[X_AXIS])
-    readreg(core.YA_OFFS_H, 2, @tmp[Y_AXIS])
-    readreg(core.ZA_OFFS_H, 2, @tmp[Z_AXIS])
+    tmp[X_AXIS] := readreg(core.XA_OFFS_H, 2)
+    tmp[Y_AXIS] := readreg(core.YA_OFFS_H, 2)
+    tmp[Z_AXIS] := readreg(core.ZA_OFFS_H, 2)
 
     long[x] := ~~tmp[X_AXIS]
     long[y] := ~~tmp[Y_AXIS]
@@ -223,17 +222,17 @@ PUB accel_set_bias(x, y, z) | tmp[ACCEL_DOF]
 '       or may not be adequate for your application
     { read temp compensation bit }
     longfill(@tmp, 0, 3)
-    readreg(core.XA_OFFS_H, 2, @tmp[X_AXIS])
-    readreg(core.YA_OFFS_H, 2, @tmp[Y_AXIS])
-    readreg(core.ZA_OFFS_H, 2, @tmp[Z_AXIS])
+    tmp[X_AXIS] := readreg(core.XA_OFFS_H, 2)
+    tmp[Y_AXIS] := readreg(core.YA_OFFS_H, 2)
+    tmp[Z_AXIS] := readreg(core.ZA_OFFS_H, 2)
 
     x := ((_abias_fact[X_AXIS]-(x / 8)) & $FFFE) | (tmp[X_AXIS] & 1)
     y := ((_abias_fact[Y_AXIS]-(y / 8)) & $FFFE) | (tmp[Y_AXIS] & 1)
     z := ((_abias_fact[Z_AXIS]-(z / 8)) & $FFFE) | (tmp[Z_AXIS] & 1)
 
-    writereg(core.XA_OFFS_H, 2, @x)
-    writereg(core.YA_OFFS_H, 2, @y)
-    writereg(core.ZA_OFFS_H, 2, @z)
+    writereg(core.XA_OFFS_H, x, 2)
+    writereg(core.YA_OFFS_H, y, 2)
+    writereg(core.ZA_OFFS_H, z, 2)
 
 
 PUB accel_data(ptr_x, ptr_y, ptr_z) | tmp[2]
@@ -263,12 +262,12 @@ PUB accel_lpf_freq(freq=-2): curr_freq | lpf_byp_bit
 ' Set accelerometer output data low-pass filter cutoff frequency, in Hz
 '   Valid values: 0 (disable), 5, 10, 20, 42, 98, 188
 '   Any other value polls the chip and returns the current setting
-    curr_freq := lpf_byp_bit := 0
-    readreg(core.ACCEL_CFG2, 1, @curr_freq)
+    curr_freq := readreg(core.ACCEL_CFG2)
     case freq
         0:                                      ' Disable/bypass the LPF
             lpf_byp_bit := (1 << core.ACCEL_FCH_B)
         5, 10, 20, 42, 98, 188:
+            lpf_byp_bit := 0
             freq := lookdown(freq: 188, 98, 42, 20, 10, 5)
         other:
             if (curr_freq >> core.ACCEL_FCH_B) & 1
@@ -278,22 +277,21 @@ PUB accel_lpf_freq(freq=-2): curr_freq | lpf_byp_bit
                 return lookup(curr_freq: 188, 98, 42, 20, 10, 5)
 
     freq := (curr_freq & core.A_DLPFCFG_MASK & core.ACCEL_FCH_B_MASK) | freq | lpf_byp_bit
-    writereg(core.ACCEL_CFG2, 1, @freq)
+    writereg(core.ACCEL_CFG2, freq)
 
 
 PUB accel_scale(g=-2): curr_scl
 ' Set accelerometer full-scale range, in g's
 '   Valid values: *2, 4, 8, 16
 '   Any other value polls the chip and returns the current setting
-    curr_scl := 0
-    readreg(core.ACCEL_CFG, 1, @curr_scl)
+    curr_scl := readreg(core.ACCEL_CFG)
     case g
         2, 4, 8, 16:
             g := lookdownz(g: 2, 4, 8, 16) << core.ACCEL_FS_SEL
             _ares := lookupz(g >> core.ACCEL_FS_SEL: 61, 122, 244, 488)
             ' (1/16384, 1/8192, 1/4096, 1/2048) * 1_000_000
             g := ((curr_scl & core.ACCEL_FS_SEL_MASK) | g) & core.ACCEL_CFG_MASK
-            writereg(core.ACCEL_CFG, 1, @g)
+            writereg(core.ACCEL_CFG, g)
         other:
             curr_scl := (curr_scl >> core.ACCEL_FS_SEL) & core.ACCEL_FS_SEL_BITS
             return lookupz(curr_scl: 2, 4, 8, 16)
@@ -305,32 +303,29 @@ PUB clock_src(src=-2): curr_src
 '       INT20 (0): Internal 20MHz oscillator
 '      *AUTO (1): Automatically select best choice (PLL if ready, else internal oscillator)
 '       CLKSTOP (7): Stop clock and hold in reset
-    curr_src := 0
-    readreg(core.PWR_MGMT_1, 1, @curr_src)
+    curr_src := readreg(core.PWR_MGMT_1)
     case src
         INT20, AUTO, CLKSTOP:
             src := (curr_src & core.CLKSEL_MASK) | src
-            writereg(core.PWR_MGMT_1, 1, @src)
+            writereg(core.PWR_MGMT_1, src)
         other:
             return curr_src & core.CLKSEL_BITS
 
 
-PUB dev_id(): id | mag_tmp, xlg_tmp
+PUB dev_id(): id
 ' Read device ID
 '   Returns: [15..8]: accel/gyro ID, [7..0]: mag ID
-    readreg(core.WIA, 1, @mag_tmp)
-    readreg(core.WHO_AM_I, 1, @xlg_tmp)
-    return ((xlg_tmp << 8) | mag_tmp)
+    id.byte[0] := readreg(core.WIA)             ' mag
+    id.byte[1] := readreg(core.WHO_AM_I)        ' xl/g
 
 
 PUB i2c_mast_dis() | tmp
 ' Disable on-chip I2C master
 '   NOTE: Used to setup to read the magnetometer from the same bus as
 '       accelerometer and gyroscope
-    tmp := 0
-    readreg(core.INT_BYPASS_CFG, 1, @tmp)
+    tmp := readreg(core.INT_BYPASS_CFG)
     tmp := ((tmp & core.BYPASS_EN_MASK) | (1 << core.BYPASS_EN)) & core.INT_BYPASS_CFG_MASK
-    writereg(core.INT_BYPASS_CFG, 1, @tmp)
+    writereg(core.INT_BYPASS_CFG, tmp)
 
 
 PUB fifo_ena(state=-2): curr_state
@@ -339,13 +334,12 @@ PUB fifo_ena(state=-2): curr_state
 '   Any other value polls the chip and returns the current setting
 '   NOTE: FALSE disables the interface to the FIFO, but the chip will still write data to it,
 '       if FIFO data sources are defined with fifo_src()
-    curr_state := 0
-    readreg(core.USER_CTRL, 1, @curr_state)
+    curr_state := readreg(core.USER_CTRL)
     case ||(state)
         0, 1:
             state := ||(state) << core.FIFOEN
             state := ((curr_state & core.FIFOEN_MASK) | state)
-            writereg(core.USER_CTRL, 1, @state)
+            writereg(core.USER_CTRL, state)
         other:
             return (((curr_state >> core.FIFOEN) & 1) == 1)
 
@@ -354,8 +348,8 @@ PUB fifo_full(): flag
 ' Flag indicating FIFO is full
 '   Returns: TRUE (-1) if FIFO is full, FALSE (0) otherwise
 '   NOTE: If this flag is set, the oldest data has already been dropped from the FIFO
-    readreg(core.INT_STATUS, 1, @flag)
-    return (((flag >> core.FIFO_OVERFL_INT) & 1) == 1)
+    flag := readreg(core.INT_STATUS)
+    return ( ( (flag >> core.FIFO_OVERFL_INT) & 1) == 1)
 
 
 PUB fifo_mode(mode=-2): curr_mode
@@ -367,8 +361,7 @@ PUB fifo_mode(mode=-2): curr_mode
 '   Any other value polls the chip and returns the current setting
 '   NOTE: If no data sources are set using fifo_src(), the current mode returned will be
 '       BYPASS (0), regardless of what the mode was previously set to
-    curr_mode := 0
-    readreg(core.CONFIG, 1, @curr_mode)
+    curr_mode := readreg(core.CONFIG)
     case mode
         BYPASS:                                 ' If bypassing the FIFO, turn
             fifo_src(%00000000)                 ' off all FIFO data collection
@@ -386,18 +379,18 @@ PUB fifo_mode(mode=-2): curr_mode
             else
                 return BYPASS
     mode := (curr_mode & core.FIFO_MODE_MASK) | mode
-    writereg(core.CONFIG, 1, @mode)
+    writereg(core.CONFIG, mode)
 
 
-PUB fifo_read(nr_bytes, ptr_data)
+PUB fifo_read(len, p_data)
 ' Read FIFO data
-    readreg(core.FIFO_R_W, nr_bytes, ptr_data)
+    readreg(core.FIFO_R_W, len, p_data)
 
 
 PUB fifo_reset() | tmp
 ' Reset the FIFO    XXX - expand..what exactly does it do?
     tmp := 1 << core.FIFO_RST
-    writereg(core.USER_CTRL, 1, @tmp)
+    writereg(core.USER_CTRL, tmp)
 
 
 PUB fifo_src(mask=-2): curr_mask
@@ -417,30 +410,27 @@ PUB fifo_src(mask=-2): curr_mask
 '   all will be buffered, even if they're not explicitly enabled (chip limitation)
     case mask
         %00000000..%11111111:
-            writereg(core.FIFO_EN, 1, @mask)
+            writereg(core.FIFO_EN, mask)
         other:
-            curr_mask := 0
-            readreg(core.FIFO_EN, 1, @curr_mask)
-            return
+            return readreg(core.FIFO_EN)
 
 
 PUB fifo_nr_unread(): nr_samples
 ' Number of unread samples stored in FIFO
 '   Returns: unsigned 13bit
-    readreg(core.FIFO_COUNTH, 2, @nr_samples)
+    return readreg(core.FIFO_COUNTH, 2)
 
 
 PUB fsync_polarity(state=-2): curr_state
 ' Set FSYNC pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.INT_BYPASS_CFG, 1, @curr_state)
+    curr_state := readreg(core.INT_BYPASS_CFG)
     case state
         LOW, HIGH:
             state := state << core.ACTL_FSYNC
             state := ((curr_state & core.ACTL_FSYNC_MASK) | state) & core.INT_BYPASS_CFG_MASK
-            writereg(core.INT_BYPASS_CFG, 1, @state)
+            writereg(core.INT_BYPASS_CFG, state)
         other:
             return ( (curr_state >> core.ACTL_FSYNC) & 1 )
 
@@ -451,25 +441,23 @@ PUB gyro_axis_ena(xyz_mask=-2): curr_mask
 '       Bits    210
 '               XYZ
 '   Any other value polls the chip and returns the current setting
-    curr_mask := 0
-    readreg(core.PWR_MGMT_2, 1, @curr_mask)
+    curr_mask := readreg(core.PWR_MGMT_2)
     case xyz_mask
         %000..%111:
             ' invert bits because the logic in the chip is actually the reverse
             ' of the method name, i.e., a bit set to 1 _disables_ that axis
             xyz_mask := ((xyz_mask ^ core.DIS_INVERT) & core.DIS_XYZG_BITS) << core.DIS_XYZG
             xyz_mask := ((curr_mask & core.DIS_XYZG_MASK) | xyz_mask)
-            writereg(core.PWR_MGMT_2, 1, @xyz_mask)
+            writereg(core.PWR_MGMT_2, xyz_mask)
         other:
             return ( ((curr_mask >> core.DIS_XYZG) & core.DIS_XYZG_BITS) ^ core.DIS_INVERT )
 
 
 PUB gyro_bias(x, y, z) | tmp[GYRO_DOF]
 ' Read gyroscope calibration offset values
-    longfill(@tmp, 0, 3)
-    readreg(core.XG_OFFS_USR, 2, @tmp[X_AXIS])
-    readreg(core.YG_OFFS_USR, 2, @tmp[Y_AXIS])
-    readreg(core.ZG_OFFS_USR, 2, @tmp[Z_AXIS])
+    tmp[X_AXIS] := readreg(core.XG_OFFS_USR, 2)
+    tmp[Y_AXIS] := readreg(core.YG_OFFS_USR, 2)
+    tmp[Z_AXIS] := readreg(core.ZG_OFFS_USR, 2)
     long[x] := ~~tmp[X_AXIS]
     long[y] := ~~tmp[Y_AXIS]
     long[z] := ~~tmp[Z_AXIS]
@@ -482,9 +470,9 @@ PUB gyro_set_bias(x, y, z)
     x := -((-32768 #> x <# 32767) / 4)
     y := -((-32768 #> y <# 32767) / 4)
     z := -((-32768 #> z <# 32767) / 4)
-    writereg(core.XG_OFFS_USR, 2, @x)
-    writereg(core.YG_OFFS_USR, 2, @y)
-    writereg(core.ZG_OFFS_USR, 2, @z)
+    writereg(core.XG_OFFS_USR, x, 2)
+    writereg(core.YG_OFFS_USR, y, 2)
+    writereg(core.ZG_OFFS_USR, z, 2)
 
 
 PUB gyro_data(ptr_x, ptr_y, ptr_z) | tmp[2]
@@ -514,9 +502,8 @@ PUB gyro_lpf_freq(freq=-2): curr_freq | lpf_byp_bits
 ' Set gyroscope output data low-pass filter cutoff frequency, in Hz
 '   Valid values: 5, 10, 20, 42, 98, 188
 '   Any other value polls the chip and returns the current setting
-    curr_freq := lpf_byp_bits := 0
-    readreg(core.CONFIG, 1, @curr_freq)
-    readreg(core.GYRO_CFG, 1, @lpf_byp_bits)
+    curr_freq := readreg(core.CONFIG)
+    lpf_byp_bits := readreg(core.GYRO_CFG)
     case freq
         0:                                      ' Disable/bypass the LPF
             ' Store the new setting into the 2nd byte of the variable
@@ -533,23 +520,22 @@ PUB gyro_lpf_freq(freq=-2): curr_freq | lpf_byp_bits
 
     lpf_byp_bits := (lpf_byp_bits.byte[0] & core.DLPF_CFG_MASK) | lpf_byp_bits.byte[1]
     freq := (curr_freq & core.DLPF_CFG_MASK) | freq
-    writereg(core.CONFIG, 1, @freq)
-    writereg(core.GYRO_CFG, 1, @lpf_byp_bits)
+    writereg(core.CONFIG, freq)
+    writereg(core.GYRO_CFG, lpf_byp_bits)
 
 
 PUB gyro_scale(scale=-2): curr_scl
 ' Set gyroscope full-scale range, in degrees per second
 '   Valid values: *250, 500, 1000, 2000
 '   Any other value polls the chip and returns the current setting
-    curr_scl := 0
-    readreg(core.GYRO_CFG, 1, @curr_scl)
+    curr_scl := readreg(core.GYRO_CFG)
     case scale
         250, 500, 1000, 2000:
             scale := lookdownz(scale: 250, 500, 1000, 2000) << core.GYRO_FS_SEL
             _gres := lookupz(scale >> core.GYRO_FS_SEL: 7633, 15_267, 30_487, 60_975)
             ' (1/131, 1/65.5, 1/32.8, 1/16.4) * 1_000_000
             scale := ((curr_scl & core.GYRO_FS_SEL_MASK) | scale)
-            writereg(core.GYRO_CFG, 1, @scale)
+            writereg(core.GYRO_CFG, scale)
         other:
             curr_scl := (curr_scl >> core.GYRO_FS_SEL) & core.GYRO_FS_SEL_BITS
             return lookupz(curr_scl: 250, 500, 1000, 2000)
@@ -559,13 +545,12 @@ PUB int_polarity(state=-2): curr_state
 ' Set interrupt pin active state/logic level
 '   Valid values: LOW (1), *HIGH (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.INT_BYPASS_CFG, 1, @curr_state)
+    curr_state := readreg(core.INT_BYPASS_CFG)
     case state
         LOW, HIGH:
             state := state << core.ACTL
             state := ((curr_state & core.ACTL_MASK) | state) & core.INT_BYPASS_CFG_MASK
-            writereg(core.INT_BYPASS_CFG, 1, @state)
+            writereg(core.INT_BYPASS_CFG, state)
         other:
             return ((curr_state >> core.ACTL) & 1)
 
@@ -576,13 +561,12 @@ PUB int_clear_mode(mode=-2): curr_mode
 '      *READ_INT_FLAG (0): Only by reading interrupt flags
 '       ANY (1): By any read operation
 '   Any other value polls the chip and returns the current setting
-    curr_mode := 0
-    readreg(core.INT_BYPASS_CFG, 1, @curr_mode)
+    curr_mode := readreg(core.INT_BYPASS_CFG)
     case mode
         ANY, READ_INT_FLAG:
             mode := mode << core.INT_ANYRD_2CLR
             mode := ((curr_mode & core.INT_ANYRD_2CLR_MASK) | mode) & core.INT_BYPASS_CFG_MASK
-            writereg(core.INT_BYPASS_CFG, 1, @mode)
+            writereg(core.INT_BYPASS_CFG, mode)
         other:
             return ((curr_mode >> core.INT_ANYRD_2CLR) & 1)
 
@@ -594,8 +578,7 @@ PUB interrupt(): flag
 '       INT_FIFO_OVERFL (16) - FIFO overflowed
 '       INT_FSYNC (8) - FSYNC interrupt occurred
 '       INT_SENSOR_READY (1) - Sensor raw data updated
-    flag := 0
-    readreg(core.INT_STATUS, 1, @flag)
+    flag := readreg(core.INT_STATUS)
 
 
 PUB int_latch_ena(state=-2): curr_state
@@ -604,13 +587,12 @@ PUB int_latch_ena(state=-2): curr_state
 '      *FALSE (0): Interrupt pin is pulsed (width = 50uS)
 '       TRUE (-1): Interrupt pin is latched, and must be cleared explicitly
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.INT_BYPASS_CFG, 1, @curr_state)
+    curr_state := readreg(core.INT_BYPASS_CFG)
     case ||(state)
         0, 1:
             state := ||(state) << core.LATCH_INT_EN
             state := ((curr_state & core.LATCH_INT_EN_MASK) | state) & core.INT_BYPASS_CFG_MASK
-            writereg(core.INT_BYPASS_CFG, 1, @state)
+            writereg(core.INT_BYPASS_CFG, state)
         other:
             return (((curr_state >> core.LATCH_INT_EN) & 1) == 1)
 
@@ -628,11 +610,9 @@ PUB int_mask(mask=-2): curr_mask
     case mask & (core.INT_ENABLE_MASK ^ $FF)    ' check for any invalid bits:
         0:                                      ' result should be 0 if all ok
             mask &= core.INT_ENABLE_MASK
-            writereg(core.INT_ENABLE, 1, @mask)
-        other:                                  ' one or more invalid bits;
-            curr_mask := 0                      ' return current setting
-            readreg(core.INT_ENABLE, 1, @curr_mask)
-            return curr_mask & core.INT_ENABLE_MASK
+            writereg(core.INT_ENABLE, mask)
+        other:                                  ' one or more invalid bits: return current setting
+            return readreg(core.INT_ENABLE) & core.INT_ENABLE_MASK
 
 
 PUB int_outp_type(mode=-2): curr_mode
@@ -641,13 +621,12 @@ PUB int_outp_type(mode=-2): curr_mode
 '      *INT_PP (0): Push-pull
 '       INT_OD (1): Open-drain
 '   Any other value polls the chip and returns the current setting
-    curr_mode := 0
-    readreg(core.INT_BYPASS_CFG, 1, @curr_mode)
+    curr_mode := readreg(core.INT_BYPASS_CFG)
     case mode
         INT_PP, INT_OD:
             mode := mode << core.OPEN
             mode := ((curr_mode & core.OPEN_MASK) | mode) & core.INT_BYPASS_CFG_MASK
-            writereg(core.INT_BYPASS_CFG, 1, @mode)
+            writereg(core.INT_BYPASS_CFG, mode)
         other:
             return ((curr_mode >> core.OPEN) & 1)
 
@@ -656,8 +635,7 @@ PUB mag_adc_res(bits=-2): curr_res | tmp
 ' Set magnetometer ADC resolution, in bits
 '   Valid values: *14, 16
 '   Any other value polls the chip and returns the current setting
-    curr_res := 0
-    readreg(core.CNTL1, 1, @curr_res)
+    curr_res := readreg(core.CNTL1)
     case bits
         14, 16:
             ' set scale factor based on current ADC res
@@ -665,7 +643,7 @@ PUB mag_adc_res(bits=-2): curr_res | tmp
             longfill(@_mres, lookupz(tmp: 5_997, 1_499), MAG_DOF)
             bits := lookdownz(bits: 14, 16) << core.BIT
             bits := ((curr_res & core.BIT_MASK) | bits)
-            writereg(core.CNTL1, 1, @bits)
+            writereg(core.CNTL1, bits)
         other:
             curr_res := (curr_res >> core.BIT) & 1
             return lookupz(curr_res: 14, 16)
@@ -690,7 +668,7 @@ PUB mag_set_bias(x, y, z)
 
 PUB mag_data(ptr_x, ptr_y, ptr_z) | tmp[2]
 ' Read Magnetometer data
-    tmp := 0
+    tmp[0] := tmp[1] := 0
     readreg(core.HXL, 7, @tmp)                  ' Read 6 mag data bytes, plus
                                                 ' an extra (required) read of
                                                 ' the status register
@@ -706,8 +684,7 @@ PUB mag_data(ptr_x, ptr_y, ptr_z) | tmp[2]
 PUB mag_data_overrun(): flag
 ' Flag indicating magnetometer data has overrun (i.e., new data arrived before previous measurement was read)
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
-    flag := 0
-    readreg(core.ST1, 1, @flag)
+    flag := readreg(core.ST1)
     return (((flag >> core.DOR) & 1) == 1)
 
 
@@ -732,8 +709,7 @@ PUB mag_data_rate(rate=-2): curr_rate
 PUB mag_data_rdy(): flag
 ' Flag indicating new magnetometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    flag := 0
-    readreg(core.ST1, 1, @flag)
+    flag := readreg(core.ST1)
     return ((flag & 1) == 1)
 
 
@@ -742,8 +718,7 @@ PUB mag_overflow(): flag
 '   Returns: TRUE (-1) if overrun occurred, FALSE (0) otherwise
 '   NOTE: If this flag is TRUE, measurement data should not be trusted
 '   NOTE: This bit self-clears when the next measurement starts
-    flag := 0
-    readreg(core.ST2, 1, @flag)
+    flag := readreg(core.ST2)
     return (((flag >> core.HOFL) & 1) == 1)
 
 
@@ -765,13 +740,12 @@ PUB mag_self_test_ena(state=-2): curr_state
 ' Enable magnetometer self-test mode (generates magnetic field)
 '   Valid values: TRUE (-1 or 1), *FALSE (0)
 '   Any other value polls the chip and returns the current setting
-    curr_state := 0
-    readreg(core.ASTC, 1, @curr_state)
+    curr_state := readreg(core.ASTC)
     case ||(state)
         0, 1:
             state := (||(state) << core.SELF) & core.ASTC_MASK
             state := (curr_state & core.SELF_MASK) | state
-            writereg(core.ASTC, 1, @state)
+            writereg(core.ASTC, state)
         other:
             return (((curr_state >> core.SELF) & 1) == 1)
 
@@ -779,7 +753,7 @@ PUB mag_self_test_ena(state=-2): curr_state
 PUB mag_soft_reset() | tmp
 ' Perform soft-reset of magnetometer: initialize all registers
     tmp := core.SOFT_RST
-    writereg(core.CNTL2, 1, @tmp)
+    writereg(core.CNTL2, tmp)
 
 
 PUB mag_opmode(mode=-2): curr_mode | tmp
@@ -793,15 +767,14 @@ PUB mag_opmode(mode=-2): curr_mode | tmp
 '       SELFTEST (8): Self-test mode
 '       FUSEACCESS (15): Fuse ROM access mode
 '   Any other value polls the chip and returns the current setting
-    curr_mode := 0
-    readreg(core.CNTL1, 1, @curr_mode)
+    curr_mode := readreg(core.CNTL1)
     case mode
         POWERDOWN, SINGLE, CONT8, CONT100, EXT_TRIG, SELFTEST, FUSEACCESS:
             mode := ((curr_mode & core.MODE_MASK) | mode) & core.CNTL1_MASK
             tmp := POWERDOWN
-            writereg(core.CNTL1, 1, @tmp)               ' power down state
+            writereg(core.CNTL1, tmp)               ' power down state
             time.msleep(100)                            ' wait 100ms first
-            writereg(core.CNTL1, 1, @mode)              ' switch to the selected mode
+            writereg(core.CNTL1, mode)              ' switch to the selected mode
         other:
             return curr_mode & core.MODE_BITS
 
@@ -811,16 +784,16 @@ PUB mag_meas()
     mag_opmode(SINGLE)
 
 
-PUB rd_mag_sens_adj()
+PUB rd_mag_sens_adj() | tmp
 ' Read magnetometer factory sensitivity adjustment values
     mag_opmode(FUSEACCESS)
-    readreg(core.ASAX, 3, @_mag_sens_adj)
+    tmp := readreg(core.ASAX, 3)
     mag_opmode(CONT100)
-    _mag_sens_adj[X_AXIS] :=    (((((_mag_sens_adj[X_AXIS] * 1000) - 128_000) / 2) / 128) ...
+    _mag_sens_adj[X_AXIS] :=    (((((tmp.byte[X_AXIS] * 1000) - 128_000) / 2) / 128) ...
                                 + 1_000) / 1000
-    _mag_sens_adj[Y_AXIS] :=    (((((_mag_sens_adj[Y_AXIS] * 1000) - 128_000) / 2) / 128) ...
+    _mag_sens_adj[Y_AXIS] :=    (((((tmp.byte[Y_AXIS] * 1000) - 128_000) / 2) / 128) ...
                                 + 1_000) / 1000
-    _mag_sens_adj[Z_AXIS] :=    (((((_mag_sens_adj[Z_AXIS] * 1000) - 128_000) / 2) / 128) ...
+    _mag_sens_adj[Z_AXIS] :=    (((((tmp.byte[Z_AXIS] * 1000) - 128_000) / 2) / 128) ...
                                 + 1_000) / 1000
 
 
@@ -841,8 +814,7 @@ PUB temp_data_rate(rate=-2): curr_rate
 
 PUB temperature(): temp
 ' Read temperature, in hundredths of a degree
-    temp := 0
-    readreg(core.TEMP_OUT_H, 2, @temp)
+    temp := readreg(core.TEMP_OUT_H, 2)
     case _temp_scale
         F:
         other:
@@ -869,19 +841,16 @@ PUB xlg_data_rate(rate=-2): curr_rate
     case rate
         4..1000:
             rate := (1000 / rate) - 1
-            writereg(core.SMPLRT_DIV, 1, @rate)
+            writereg(core.SMPLRT_DIV, rate)
         other:
-            curr_rate := 0
-            readreg(core.SMPLRT_DIV, 1, @curr_rate)
+            curr_rate := readreg(core.SMPLRT_DIV)
             return 1000 / (curr_rate + 1)
 
 
 PUB xlg_data_rdy(): flag
 ' Flag indicating new gyroscope/accelerometer data is ready to be read
 '   Returns: TRUE (-1) if new data available, FALSE (0) otherwise
-    flag := 0
-    readreg(core.INT_STATUS, 1, @flag)
-    return ((flag & 1) == 1)
+    return ( (readreg(core.INT_STATUS) & 1) == 1)
 
 
 PUB xlg_lpf_freq(freq=-2): curr_freq
@@ -896,72 +865,71 @@ PUB xlg_lpf_freq(freq=-2): curr_freq
 PUB xlg_soft_reset() | tmp
 ' Perform soft-reset of accelerometer and gyro: initialize all registers
     tmp := core.XLG_SOFT_RST
-    writereg(core.PWR_MGMT_1, 1, @tmp)
+    writereg(core.PWR_MGMT_1, tmp)
 
 
-PRI readreg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
-' Read nr_bytes from the slave device ptr_buff
-    case reg_nr                                 ' validate reg
-        core.SELF_TEST_X_GYRO..core.SELF_TEST_Z_GYRO, ...
-        core.SELF_TEST_X_ACCEL..core.SELF_TEST_Z_ACCEL, core.SMPLRT_DIV..core.WOM_THR, ...
-        core.FIFO_EN..core.INT_ENABLE, core.INT_STATUS, ...
-        core.EXT_SENS_DATA_00..core.EXT_SENS_DATA_23, core.I2C_SLV0_DO..core.USER_CTRL, ...
-        core.PWR_MGMT_2, core.FIFO_COUNTH..core.WHO_AM_I, core.XG_OFFS_USR, core.YG_OFFS_USR, ...
-        core.ZG_OFFS_USR, core.XA_OFFS_H, core.YA_OFFS_H, core.ZA_OFFS_H, ...
-        core.ACCEL_XOUT_H..core.ACCEL_ZOUT_L, core.GYRO_XOUT_H..core.GYRO_ZOUT_L, core.TEMP_OUT_H:
-            { accel/gyro regs }
+PRI readreg(reg_nr, len=1, p_dest=0): v | cmd_pkt
+' Read register contents
+'   reg_nr:     register number (MSB: device ID, LSB: register number)
+'   len:        length/number of bytes to read (optional; default: 1)
+'   p_dest:     pointer to destination to copy data to (only used in output data acquisition;
+'               ignored otherwise)
+'   Returns:    register value
+    v := 0
+    case reg_nr.byte[1]
+        core.XLG_ID:                            ' accel/gyro registers
             cmd_pkt.byte[0] := (SLAVE_XLG_WR | _addr_bits)
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start()
             i2c.wrblock_lsbf(@cmd_pkt, 2)
             i2c.start()
             i2c.write(SLAVE_XLG_RD | _addr_bits)
-            i2c.rdblock_msbf(ptr_buff, nr_bytes, i2c.NAK)
+            if (    (reg_nr.byte[0] == (core.ACCEL_XOUT_H & $ff) ) ...
+                    or (reg_nr.byte[0] == (core.GYRO_XOUT_H & $ff) ) ...
+                    or (reg_nr.byte[0] == (core.FIFO_R_W & $ff) ) )
+                i2c.rdblock_msbf(p_dest, len, i2c.NAK)
+            else
+                i2c.rdblock_msbf(@v, len, i2c.NAK)
             i2c.stop()
-        core.HXL, core.HYL, core.HZL, core.WIA..core.ASTC, core.I2CDIS..core.ASAZ:
-            { mag regs }
+        core.MAG_ID:                            ' mag registers
             cmd_pkt.byte[0] := SLAVE_MAG_WR
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start()
             i2c.wrblock_lsbf(@cmd_pkt, 2)
             i2c.start()
             i2c.write(SLAVE_MAG_RD)
-            i2c.rdblock_lsbf(ptr_buff, nr_bytes, i2c.NAK)
+            if ( reg_nr.byte[0] == (core.HXL & $ff) )
+                i2c.rdblock_lsbf(p_dest, len, i2c.NAK)
+            else
+                i2c.rdblock_lsbf(@v, len, i2c.NAK)
             i2c.stop()
-        other:
-            return
 
 
-PRI writereg(reg_nr, nr_bytes, ptr_buff) | cmd_pkt
-' Write nr_bytes to the slave device from ptr_buff
-    case reg_nr                                 ' validate reg
-        core.SELF_TEST_X_GYRO..core.SELF_TEST_Z_GYRO, ...
-        core.SELF_TEST_X_ACCEL..core.SELF_TEST_Z_ACCEL, core.SMPLRT_DIV..core.WOM_THR, ...
-        core.FIFO_EN..core.I2C_SLV4_CTRL, core.INT_BYPASS_CFG, core.INT_ENABLE, ...
-        core.I2C_SLV0_DO..core.PWR_MGMT_2, core.FIFO_COUNTH..core.FIFO_R_W, core.XG_OFFS_USR, ...
-        core.YG_OFFS_USR, core.ZG_OFFS_USR, core.XA_OFFS_H, core.YA_OFFS_H, core.ZA_OFFS_H:
-            { accel/gyro regs }
+PRI writereg(reg_nr, val, len=1) | cmd_pkt
+' Write value to register
+'   reg_nr: register number (MSB: device ID, LSB: register number)
+'   val:    new value
+'   len:    length/number of bytes to write (optional; default: 1)
+    case reg_nr.byte[1]
+        core.XLG_ID:                            ' accel/gyro registers
             cmd_pkt.byte[0] := (SLAVE_XLG_WR | _addr_bits)
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start()
             i2c.wrblock_lsbf(@cmd_pkt, 2)
-            i2c.wrblock_msbf(ptr_buff, nr_bytes)
+            i2c.wrblock_msbf(@val, len)
             i2c.stop()
-        core.CNTL1..core.ASTC, core.I2CDIS:
-            { mag regs }
+        core.MAG_ID:                            ' mag registers
             cmd_pkt.byte[0] := SLAVE_MAG_WR
             cmd_pkt.byte[1] := reg_nr.byte[0]
             i2c.start()
             i2c.wrblock_lsbf(@cmd_pkt, 2)
-            i2c.write(byte[ptr_buff][0])
+            i2c.write(val.byte[0])
             i2c.stop()
-        other:
-            return
 
 
 DAT
 {
-Copyright 2024 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,

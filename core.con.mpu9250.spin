@@ -1,13 +1,12 @@
 {
-    --------------------------------------------
-    Filename: core.con.mpu9250.spin
-    Author: Jesse Burt
-    Description: MPU9250-specific constants
-    Copyright (c) 2022
-    Started Sep 2, 2019
-    Updated Sep 4, 2022
-    See end of file for terms of use.
-    --------------------------------------------
+----------------------------------------------------------------------------------------------------
+    Filename:       core.con.mpu9250.spin
+    Description:    MPU9250-specific constants
+    Author:         Jesse Burt
+    Started:        Sep 2, 2019
+    Updated:        May 10, 2025
+    Copyright (c) 2025 - See end of file for terms of use.
+----------------------------------------------------------------------------------------------------
 }
 
 CON
@@ -16,8 +15,10 @@ CON
     SLAVE_ADDR                  = $68 << 1
     SLAVE_ADDR_MAG              = $0C << 1
 
-    XL_G                        = $71 << 8
-    MAG                         = $48 << 8
+    XLG_ID                      = $71
+    MAG_ID                      = $48
+    XL_G                        = XLG_ID << 8
+    MAG                         = MAG_ID << 8
     DEVID_RESP                  = $7148
 
 ' Startup time
@@ -301,12 +302,14 @@ CON
     ASAY                        = MAG | $11
     ASAZ                        = MAG | $12
 
-PUB null{}
+
+PUB null()
 ' This is not a top-level object
+
 
 DAT
 {
-Copyright 2022 Jesse Burt
+Copyright 2025 Jesse Burt
 
 Permission is hereby granted, free of charge, to any person obtaining a copy of this software and
 associated documentation files (the "Software"), to deal in the Software without restriction,
